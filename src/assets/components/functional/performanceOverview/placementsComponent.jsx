@@ -1,0 +1,373 @@
+import React, { useEffect, useContext, useState, useMemo, useRef } from "react";
+import MuiDataTableComponent from "../../common/muidatatableComponent";
+import '../../../styles/keywordsComponent/keywordsComponent.less';
+import { Typography, Snackbar, Alert, Button, Box, CircularProgress } from "@mui/material";
+import overviewContext from "../../../../store/overview/overviewContext";
+import { useSearchParams, useNavigate } from "react-router";
+import ColumnPercentageDataComponent from "../../common/columnPercentageDataComponent";
+import TrendsModal from "./modal/trendsModal";
+import { cachedFetch } from "../../../../services/cachedFetch";
+import { getCache } from "../../../../services/cacheUtils";
+import NewPercentageDataComponent from "../../common/newPercentageDataComponent";
+
+const PlacementsComponent = () => {
+
+    const { dateRange, getBrandsData, brands, formatDate, campaignName } = useContext(overviewContext);
+
+    const [showTrendsModal, setShowTrendsModal] = useState({ name: '', show: false, date: [] });
+    const [placementData, setPlacementData] = useState({});
+    const [isLoading, setIsLoading] = useState(false);
+    const [snackbar, setSnackbar] = useState({ open: false, message: "", severity: "success" });
+
+    const [searchParams] = useSearchParams();
+    const operator = searchParams.get("operator");
+    const selectedBrand = searchParams.get("brand") || "Cinthol Grocery";
+    const navigate = useNavigate();
+
+    // Add ref to handle abort controller for API calls
+    const abortControllerRef = useRef(null);
+
+    // Brand account combinations
+    const accountCombinations = [
+        {"baccount": "PR83RX8HIYLX", "aaccount": "BGHM2A61UYC1", "brand": "Godrej Fab Nationals"},
+        {"baccount": "PR83RX8HIYLX", "aaccount": "OQHE4X5E9H9Z", "brand": "Ezee Grocery"},
+        {"baccount": "PR83RX8HIYLX", "aaccount": "KFMJJUIIWBEO", "brand": "Godrej No. 1 Grocery"},
+        {"baccount": "PR83RX8HIYLX", "aaccount": "G6QNRWQT32XH", "brand": "Cinthol Nationals"},
+        {"baccount": "PR83RX8HIYLX", "aaccount": "2LEFMRE1IKA4", "brand": "Good knight Grocery"},
+        {"baccount": "PR83RX8HIYLX", "aaccount": "Y7TQL54CL7SR", "brand": "Good knight Nationals"},
+        {"baccount": "PR83RX8HIYLX", "aaccount": "BRBAXN6KS9EV", "brand": "Expert Grocery"},
+        {"baccount": "PR83RX8HIYLX", "aaccount": "X2E0Y0M08PVQ", "brand": "Genteel Nationals"},
+        {"baccount": "PR83RX8HIYLX", "aaccount": "0J0ATUB4X43G", "brand": "Godrej Aer Grocery"},
+        {"baccount": "PR83RX8HIYLX", "aaccount": "KWHA1YD3JIBJ", "brand": "Expert Nationals"},
+        {"baccount": "PR83RX8HIYLX", "aaccount": "77W12KF7HW7S", "brand": "Hit Grocery"},
+        {"baccount": "PR83RX8HIYLX", "aaccount": "28KC2C2ZE3W5", "brand": "Godrej Fab Grocery"},
+        {"baccount": "PR83RX8HIYLX", "aaccount": "P3EKJ4KIV6VA", "brand": "Hit Nationals"},
+        {"baccount": "PR83RX8HIYLX", "aaccount": "2LEFMRE1IKA4", "brand": "Godrej No.1 Nationals"},
+        {"baccount": "PR83RX8HIYLX", "aaccount": "75FKCW7PXX4N", "brand": "Cinthol Grocery"},
+        {"baccount": "PR83RX8HIYLX", "aaccount": "UH0ND54US2AL", "brand": "Godrej Aer Nationals"},
+        {"baccount": "PR83RX8HIYLX", "aaccount": "DWONWCO5L46V", "brand": "Genteel Grocery"},
+        {"baccount": "K4ZBBTIP0R", "aaccount": "WX40F7MLW5VX", "brand": "Park Avenue Grocery"},
+        {"baccount": "K4ZBBTIP0R", "aaccount": "ENSAR2MNLFGS", "brand": "Kamasutra Grocery"},
+        {"baccount": "K4ZBBTIP0R", "aaccount": "J66C5M8GUNCN", "brand": "Park Avenue Nationals"},
+        {"baccount": "K4ZBBTIP0R", "aaccount": "GGRG6OJKHMNQ", "brand": "Kamasutra Nationals"}
+    ];
+
+    // Get unique brands for dropdown
+    const uniqueBrands = useMemo(() => {
+        const brands = [...new Set(accountCombinations.map(combo => combo.brand))];
+        return brands.sort();
+    }, []);
+
+    const getPlacementData = async (forceRefresh = false) => {
+        if (!operator) return;
+
+        if (abortControllerRef.current) {
+            abortControllerRef.current.abort();
+        }
+
+        const controller = new AbortController();
+        abortControllerRef.current = controller;
+
+        setPlacementData({});
+        setIsLoading(true);
+
+        const token = localStorage.getItem("accessToken");
+        if (!token) {
+            console.error("No access token found");
+            setIsLoading(false);
+            return;
+        }
+
+        const startDate = formatDate(dateRange[0].startDate);
+        const endDate = formatDate(dateRange[0].endDate);
+        const ts = forceRefresh ? `&_=${Date.now()}` : "";
+
+        let url = `https://react-api-script.onrender.com/gcpl/placement?start_date=${startDate}&end_date=${endDate}&platform=${operator}${ts}`;
+        if (selectedBrand && typeof selectedBrand === "string") {
+            url += `&brand_name=${encodeURIComponent(selectedBrand)}`;
+        }
+        const cacheKey = `cache:GET:${url}`;
+
+        if (forceRefresh) {
+            try { localStorage.removeItem(cacheKey); } catch (_) {}
+        } else {
+            const cached = getCache(cacheKey);
+            if (cached) {
+                setPlacementData(cached);
+                setIsLoading(false);
+                return;
+            }
+        }
+
+        try {
+            const response = await cachedFetch(url, {
+                method: "GET",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${token}`,
+                },
+                signal: controller.signal,
+            }, { ttlMs: 5 * 60 * 1000, cacheKey, bypassCache: forceRefresh });
+
+            if (!response.ok) {
+                throw new Error(`Error: ${response.status} ${response.statusText}`);
+            }
+
+            const data = await response.json();
+            setPlacementData(data);
+            if (forceRefresh) {
+                try { localStorage.setItem(cacheKey, JSON.stringify(data)); } catch (_) {}
+            }
+        } catch (error) {
+            if (error.name === "AbortError") {
+                console.log("Previous request aborted due to operator change.");
+            } else {
+                console.error("Failed to fetch placement data:", error.message);
+                setPlacementData({});
+            }
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleRefresh = () => {
+        getPlacementData(true);
+    };
+
+    // Single useEffect that mirrors OverviewComponent behavior
+    useEffect(() => {
+        if (abortControllerRef.current) {
+            abortControllerRef.current.abort();
+        }
+
+        const timeout = setTimeout(() => {
+            if (localStorage.getItem("accessToken")) {
+                getPlacementData();
+            }
+        }, 100);
+
+        return () => {
+            if (abortControllerRef.current) {
+                abortControllerRef.current.abort();
+            }
+            clearTimeout(timeout);
+        }
+    }, [operator, dateRange, selectedBrand]); // Include selectedBrand to force refresh on brand change
+
+    useEffect(() => {
+        getBrandsData();
+    }, [operator]);
+
+    useEffect(() => {
+        if (!localStorage.getItem("accessToken")) {
+            navigate("/login");
+            window.location.reload();
+        }
+    }, []);
+
+    const PlacementColumns = [
+        {
+            field: "type",
+            headerName: "PLACEMENT TYPE",
+            minWidth: 200,
+            renderCell: (params) => (
+                <div className="text-icon-div cursor-pointer">
+                    <Typography className="redirect" variant="body2">{params.row.type}</Typography>
+                </div>
+            ),
+        },
+        {
+            field: "impressions",
+            headerName: "IMPRESSIONS",
+            minWidth: 150,
+            renderCell: (params) => (
+                <ColumnPercentageDataComponent mainValue={params.row.impressions} percentValue={params.row.impressions_change} />
+            ),
+            type: "number",
+            align: "left",
+            headerAlign: "left",
+        },
+        {
+            field: "clicks",
+            headerName: "CLICKS",
+            minWidth: 150,
+            renderCell: (params) => (
+                <ColumnPercentageDataComponent mainValue={params.row.clicks} percentValue={params.row.clicks_change} />
+            ),
+            type: "number",
+            align: "left",
+            headerAlign: "left",
+        },
+        {
+            field: "spend",
+            headerName: "SPENDS",
+            minWidth: 170,
+            renderCell: (params) => (
+                <ColumnPercentageDataComponent mainValue={params.row.spend} percentValue={params.row.spend_change} />
+            ),
+            type: "number",
+            align: "left",
+            headerAlign: "left",
+        },
+        {
+            field: "orders",
+            headerName: "ORDERS",
+            minWidth: 150,
+            renderCell: (params) => (
+                <ColumnPercentageDataComponent mainValue={params.row.orders} percentValue={params.row.orders_change} />
+            ),
+            type: "number",
+            align: "left",
+            headerAlign: "left",
+        },
+        {
+            field: "revenue",
+            headerName: "SALES",
+            minWidth: 150,
+            renderCell: (params) => (
+                <ColumnPercentageDataComponent mainValue={params.row.revenue} percentValue={params.row.revenue_change} />
+            ),
+            type: "number",
+            align: "left",
+            headerAlign: "left",
+        },
+        {
+            field: "cpc",
+            headerName: "CPC",
+            minWidth: 150,
+            renderCell: (params) => (
+                <ColumnPercentageDataComponent mainValue={params.row.cpc} percentValue={params.row.cpc_change} />
+            ),
+            type: "number",
+            align: "left",
+            headerAlign: "left",
+        },
+        {
+            field: "cpm",
+            headerName: "CPM",
+            minWidth: 150,
+            renderCell: (params) => (
+                <ColumnPercentageDataComponent mainValue={params.row.cpm} percentValue={params.row.cpm_change} />
+            ),
+            type: "number",
+            align: "left",
+            headerAlign: "left",
+        },
+        {
+            field: "ctr",
+            headerName: "CTR",
+            minWidth: 150,
+            renderCell: (params) => (
+                <NewPercentageDataComponent firstValue={params.row.ctr} secValue={params.row.ctr_change} />
+            ),
+            type: "number",
+            align: "left",
+            headerAlign: "left",
+        },
+        {
+            field: "cvr",
+            headerName: "CVR",
+            minWidth: 150,
+            renderCell: (params) => (
+                <NewPercentageDataComponent firstValue={params.row.cvr} secValue={params.row.cvr_change} />
+            ),
+            type: "number",
+            align: "left",
+            headerAlign: "left",
+        },
+        {
+            field: "aov",
+            headerName: "AOV",
+            minWidth: 150,
+            renderCell: (params) => (
+                <ColumnPercentageDataComponent mainValue={params.row.aov} percentValue={params.row.aov_change} />
+            ),
+            type: "number",
+            align: "left",
+            headerAlign: "left",
+        },
+        {
+            field: "roas",
+            headerName: "ROAS",
+            minWidth: 150,
+            renderCell: (params) => (
+                <ColumnPercentageDataComponent mainValue={params.row.roas} percentValue={params.row.roas_change} />
+            ),
+            type: "number",
+            align: "left",
+            headerAlign: "left",
+        },
+        {
+            field: "campaign_name",
+            headerName: "CAMPAIGN",
+            minWidth: 300,
+        },
+        {
+            field: "ad_group_id",
+            headerName: "AD GROUP ID",
+            minWidth: 200,
+            align: "left",
+            headerAlign: "left",
+        },
+    ];
+
+    const columns = useMemo(() => {
+        return PlacementColumns;
+    }, [operator, brands]);
+
+    const handleSnackbarClose = () => {
+        setSnackbar({ ...snackbar, open: false });
+    };
+
+    const handleSnackbarOpen = (message, severity) => {
+        setSnackbar({ open: true, message, severity });
+    };
+
+    return (
+        <React.Fragment>
+            <TrendsModal
+                showTrendsModal={showTrendsModal}
+                setShowTrendsModal={setShowTrendsModal}
+            />
+            <div className="shadow-box-con-keywords aggregated-view-con">
+                <div className="datatable-con-keywords">
+                    <Box sx={{ display: "flex", justifyContent: "flex-end", mb: 1 }}>
+                        <Button variant="outlined" size="small" onClick={handleRefresh}>
+                            Refresh
+                        </Button>
+                    </Box>
+
+                    {isLoading ? (
+                        <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: 200 }}>
+                            <CircularProgress />
+                        </Box>
+                    ) : (
+                        <MuiDataTableComponent
+                            isLoading={isLoading}
+                            isExport={true}
+                            columns={columns}
+                            data={placementData.data || []}
+                        />
+                    )}
+                </div>
+            </div>
+            <Snackbar
+                anchorOrigin={{ vertical: "top", horizontal: "center" }}
+                open={snackbar.open}
+                autoHideDuration={4000}
+                onClose={handleSnackbarClose}
+            >
+                <Alert
+                    onClose={handleSnackbarClose}
+                    severity={snackbar.severity}
+                    variant="filled"
+                    sx={{ width: "100%" }}
+                >
+                    {snackbar.message}
+                </Alert>
+            </Snackbar>
+        </React.Fragment>
+    );
+};
+
+export default PlacementsComponent;

@@ -108,10 +108,10 @@ const AddRuleCreator = (props) => {
             if (isEditMode) {
                 // Update existing rule
                 const getUpdateRuleUrl = () => {
-                    if (operator === "Flipkart") {
-                        return `https://react-api-script.onrender.com/gcpl/update-rule?rule_id=${ruleData.rule_id}&platform=${operator}`;
+                    if (operator === "Blinkit") {
+                        return `https://react-api-script.onrender.com/sugar/update-rule?rule_id=${ruleData.rule_id}&platform=${operator}`;
                     } else if (operator === "BigBasket") {
-                        return `http://react-api-script.onrender.com/gcpl/update-rule?platform=${operator}&rule_id=${ruleData.rule_id}`;
+                        return `http://react-api-script.onrender.com/sugar/update-rule?platform=${operator}&rule_id=${ruleData.rule_id}`;
                     }
                     return "";
                 };
@@ -119,7 +119,7 @@ const AddRuleCreator = (props) => {
                 method = "PATCH";
             } else {
                 // Create new rule
-                url = `https://react-api-script.onrender.com/gcpl/create-rule?platform=${operator}`;
+                url = `https://react-api-script.onrender.com/sugar/create-rule?platform=${operator}`;
                 method = "POST";
             }
 

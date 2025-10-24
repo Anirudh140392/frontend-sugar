@@ -180,7 +180,7 @@ const ProductsComponent = () => {
         { value: "aborted", label: "Aborted" }
     ];
 
-    const ProductsColumnFlipkart = [
+    const ProductsColumnBlinkit = [
         {
             field: "fsn_id",
             headerName: "FSN ID",
@@ -558,7 +558,7 @@ const ProductsComponent = () => {
         const endDate = formatDate(dateRange[0].endDate);
         const ts = forceRefresh ? `&_=${Date.now()}` : "";
 
-        let url = `https://react-api-script.onrender.com/gcpl/product?start_date=${startDate}&end_date=${endDate}&platform=${operator}${ts}`;
+        let url = `https://react-api-script.onrender.com/sugar/products?start_date=${startDate}&end_date=${endDate}&platform=${operator}${ts}`;
         if (selectedBrand && typeof selectedBrand === "string") {
             url += `&brand_name=${encodeURIComponent(selectedBrand)}`;
         }
@@ -609,7 +609,7 @@ const ProductsComponent = () => {
     const columns = useMemo(() => {
         if (operator === "Amazon") return ProductsColumnAmazon;
         if (operator === "Zepto") return ProductsColumnZepto;
-        if (operator === "Flipkart") return ProductsColumnFlipkart;
+        if (operator === "Blinkit") return ProductsColumnBlinkit;
         if (operator === "Swiggy") return ProductsColumnSwiggy;
         return [];
     }, [operator, brands]);

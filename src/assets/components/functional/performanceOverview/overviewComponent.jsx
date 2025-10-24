@@ -184,102 +184,80 @@ const OverviewComponent = () => {
         
     ];
 
-     const CategoryColumnsFlipkart = [
-        {
-            field: "Campaign_Type",
-            headerName: "CAMPAIGN TAGS",
-            minWidth: 200,
-           
-        },
-        {
-            field: "Spend",
-            headerName: "SPEND",
-            minWidth: 150,
-           
-        },
-        {
-            field: "Clicks",
-            headerName: "CLICKS",
-            minWidth: 150,
-           
-        },
-         {
-            field: "Impressions",
-            headerName: "IMPRESSIONS",
-            minWidth: 150,
-           
-        },
-         {
-            field: "Sales",
-            headerName: "SALES",
-            minWidth: 150,
-            type: "number", align: "left",
-            headerAlign: "left",
-
-        },
-          
-         {
-            field: "Orders",
-            headerName: "ORDERS",
-            minWidth: 150,
-            type: "number", align: "left",
-            headerAlign: "left",
-
-        },
-         {
-            field: "ROI",
-            headerName: "ROI",
-            minWidth: 150,
-            type: "number", align: "left",
-            headerAlign: "left",
-
-        },
-         {
-            field: "CPC",
-            headerName: "CPC",
-            minWidth: 150,
-            type: "number", align: "left",
-            headerAlign: "left",
-
-        },
-         {
-            field: "CPM",
-            headerName: "CPM",
-            minWidth: 150,
-            type: "number", align: "left",
-            headerAlign: "left",
-
-        },
-         {
-            field: "CTR",
-            headerName: "CTR",
-            minWidth: 150,
-            type: "number", align: "left",
-            headerAlign: "left",
-
-        },
-         {
-            field: "ROAS",
-            headerName: "ROAS",
-            minWidth: 150,
-            type: "number", align: "left",
-            headerAlign: "left",
-
-        },
-         {
-            field: "ACOS",
-            headerName: "ACOS",
-            minWidth: 150,
-            type: "number", align: "left",
-            headerAlign: "left",
-
-        },
-    
-
-      
-        
-    ];
-
+    const CategoryColumnsBlinkit = [
+    {
+        field: "campaign_tags", // Changed from "Campaign_Type"
+        headerName: "CAMPAIGN TAGS",
+        minWidth: 200,
+    },
+    {
+        field: "estimated_budget_consumed_x", // Changed from "Spend"
+        headerName: "SPEND",
+        minWidth: 150,
+        type: "number", 
+        align: "left",
+        headerAlign: "left",
+    },
+    {
+        field: "direct_atc_x", // This represents clicks (add to cart actions)
+        headerName: "CLICKS",
+        minWidth: 150,
+        type: "number", 
+        align: "left",
+        headerAlign: "left",
+    },
+    {
+        field: "impressions_x", // Changed from "Impressions"
+        headerName: "IMPRESSIONS",
+        minWidth: 150,
+        type: "number", 
+        align: "left",
+        headerAlign: "left",
+    },
+    {
+        field: "total_sales_x", // Changed from "Sales"
+        headerName: "SALES",
+        minWidth: 150,
+        type: "number", 
+        align: "left",
+        headerAlign: "left",
+    },
+    {
+        field: "direct_quantities_sold_x", // This represents orders
+        headerName: "ORDERS",
+        minWidth: 150,
+        type: "number", 
+        align: "left",
+        headerAlign: "left",
+    },
+    {
+        field: "roas_x", // Changed from "ROI"
+        headerName: "ROAS", // Consider changing header to match field
+        minWidth: 150,
+        type: "number", 
+        align: "left",
+        headerAlign: "left",
+    },
+   
+    {
+        field: "cpm_x", // Changed from "CPM"
+        headerName: "CPM",
+        minWidth: 150,
+        type: "number", 
+        align: "left",
+        headerAlign: "left",
+    },
+   
+  
+    {
+        field: "acos_x", // Changed from "ACOS"
+        headerName: "ACOS",
+        minWidth: 150,
+        type: "number", 
+        align: "left",
+        headerAlign: "left",
+    },
+];
 
     const CategoryColumnsSwiggy = [
         { field: "category", headerName: "CATEGORY", minWidth: 150 },
@@ -484,7 +462,7 @@ const OverviewComponent = () => {
             if (operator === "Amazon") return CategoryColumnsAmazon;
     
             if (operator === "Zepto") return CategoryColumnsZepto;
-            if (operator === "Flipkart") return CategoryColumnsFlipkart;
+            if (operator === "Blinkit") return CategoryColumnsBlinkit;
              if (operator === "Swiggy") return CategoryColumnsSwiggy;
             return [];
         }, [operator, brands]);
@@ -574,21 +552,21 @@ const OverviewComponent = () => {
                             <div className="col-md-4">
                                 <CTRWidget
                                     firstHeadingText="Impressions"
-                                    firstHeadingData={`${overviewData?.metrics_data?.Impressions ? toLakhs(overviewData?.metrics_data?.Impressions) : "-"}`}
+                                    firstHeadingData={`${overviewData?.metrics_data?.total_impressions ? toLakhs(overviewData?.metrics_data?.total_impressions) : "-"}`}
                                     secondHeadingText="Clicks"
-                                    secondHeadingData={`${overviewData?.metrics_data?.Clicks ? toThousands(overviewData?.metrics_data?.Clicks) : "-"}`} />
+                                    secondHeadingData={`${overviewData?.metrics_data?.total_clicks ? toThousands(overviewData?.metrics_data?.total_clicks) : "-"}`} />
                             </div>
                             <div className="col-md-4">
                                 <CTRWidget
                                     firstHeadingText="Spends"
-                                    firstHeadingData={`${overviewData?.metrics_data?.Spend ? toLakhs(overviewData?.metrics_data?.Spend) : "-"}`}
+                                    firstHeadingData={`${overviewData?.metrics_data?.total_spends ? toLakhs(overviewData?.metrics_data?.total_spends) : "-"}`}
                                     secondHeadingText="Sales"
-                                    secondHeadingData={`${overviewData?.metrics_data?.Sales ? toLakhs(overviewData?.metrics_data?.Sales) : "-"}`} />
+                                    secondHeadingData={`${overviewData?.metrics_data?.total_sales ? toLakhs(overviewData?.metrics_data?.total_sales) : "-"}`} />
                             </div>
                             <div className="col-md-4">
                                 <CTRWidget
                                     firstHeadingText="Orders"
-                                    firstHeadingData={`${overviewData?.metrics_data?.Orders ? toThousands(overviewData?.metrics_data?.Orders) : "-"}`}
+                                    firstHeadingData={`${overviewData?.metrics_data?.total_orders ? toThousands(overviewData?.metrics_data?.total_orders) : "-"}`}
                                     secondHeadingText="ROAS"
                                     secondHeadingData={`${overviewData?.metrics_data?.avg_roas ? overviewData?.metrics_data?.avg_roas : "-"}`} />
                             </div>

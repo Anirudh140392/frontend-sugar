@@ -49,7 +49,7 @@ const AdGroupsComponent = () => {
 
         try {
             const response = await fetch(
-                `https://react-api-script.onrender.com/gcpl/adgroups?start_date=${startDate}&end_date=${endDate}&platform=Amazon`,
+                `https://react-api-script.onrender.com/sugar/adgroups?start_date=${startDate}&end_date=${endDate}&platform=Amazon`,
                 {
                     method: "GET",
                     headers: {
@@ -99,7 +99,7 @@ const AdGroupsComponent = () => {
                 platform: operator,
                 campaign_id: campaignId
             });
-            const response = await fetch(`https://react-api-script.onrender.com/gcpl/toggle_ad_group?${params.toString()}`, {
+            const response = await fetch(`https://react-api-script.onrender.com/sugar/toggle_ad_group?${params.toString()}`, {
                 method: "PUT",
                 headers: {
                     "Content-Type": "application/json",

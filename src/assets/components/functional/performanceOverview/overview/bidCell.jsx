@@ -24,7 +24,7 @@ const BidCell = ({ value, campaignId, onUpdate, targetId, campaignType, adGroupI
                 keyword_id: keywordId,
                 bid: bid
             });
-            const response = await fetch(`https://react-api-script.onrender.com/gcpl/update_bid?${params.toString()}`, {
+            const response = await fetch(`https://react-api-script.onrender.com/sugar/update_bid?${params.toString()}`, {
                 method: "PUT",
                 headers: {
                     Authorization: `Bearer ${token}`,

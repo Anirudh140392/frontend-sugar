@@ -21,7 +21,7 @@ const TopTabs = (props) => {
             <div className="top-tabs-con">
 
                 <ul>
-                    {['Amazon','Zepto','Flipkart'].includes(operatorName) && <TabList
+                    {['Amazon','Zepto','Blinkit'].includes(operatorName) && <TabList
                         isShowCount={false}
                         tabText="Suggested Keywords"
                         showActiveTab={showActiveTab}

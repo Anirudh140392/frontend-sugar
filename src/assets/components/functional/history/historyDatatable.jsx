@@ -44,7 +44,7 @@ const HistoryDatatable = () => {
 
     ];
 
-    const HistoryColumnsFlipkart = [
+    const HistoryColumnsBlinkit = [
         { field: "date", headerName: "Date", minWidth: 150 },
         { field: "time", headerName: "Time", minWidth: 150 },
         { field: "module", headerName: "Module", minWidth: 150 },
@@ -101,7 +101,7 @@ const HistoryDatatable = () => {
         }
 
         try {
-            const response = await fetch(`https://react-api-script.onrender.com/gcpl/history?platform=${operator}`, {
+            const response = await fetch(`https://react-api-script.onrender.com/sugar/history?platform=${operator}`, {
                 method: "GET",
                 headers: {
                     "Content-Type": "application/json",
@@ -146,7 +146,7 @@ const HistoryDatatable = () => {
         switch (operator) {
             case "Amazon": return HistoryColumnsAmazon;
             case "Swiggy": return HistoryColumnsSwiggy;
-            case "Flipkart": return HistoryColumnsFlipkart;
+            case "Blinkit": return HistoryColumnsBlinkit;
             
             default: return HistoryColumnsZepto;
         }

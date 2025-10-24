@@ -30,7 +30,7 @@ const Login = () => {
         setIsLoggingIn(true);
 
         try {
-            const res = await axios.post(`${url}/gcpl/login`, {
+            const res = await axios.post(`${url}/sugar/login`, {
                 username: userName,
                 password: password,
             });
@@ -41,7 +41,7 @@ const Login = () => {
             // Persist immediately so Navbar fallback can read it on first render
             localStorage.setItem("username", name);
             localStorage.setItem("accessToken", access);
-            navigate("/?operator=Flipkart");
+            navigate("/?operator=Blinkit");
         } catch (error) {
             handleSnackbarOpen("Failed to login.", "error");
         } finally {

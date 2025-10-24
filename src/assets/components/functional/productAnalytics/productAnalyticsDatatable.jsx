@@ -41,7 +41,7 @@ const ProductAnalyticsDatatable = () => {
         const endDate = formatDate(dateRange[0].endDate);
 
         try {
-            const url = `https://react-api-script.onrender.com/gcpl/product-analytics?platform=${operator}&start_date=${startDate}&end_date=${endDate}`;
+            const url = `https://react-api-script.onrender.com/sugar/product-analytics?platform=${operator}&start_date=${startDate}&end_date=${endDate}`;
             const cacheKey = `cache:GET:${url}`;
 
             // Serve from cache immediately if available and skip any request

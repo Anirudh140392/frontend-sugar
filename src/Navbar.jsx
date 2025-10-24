@@ -154,7 +154,7 @@ const Navbar = () => {
                     abortControllerRef.current.abort();
                 }
 
-                if (operatorName !== "Flipkart") {
+                if (operatorName !== "Amazon") {
                     setWalletBalance("N/A");
                     setWalletLabel("Wallet Balance");
                     return;
@@ -172,7 +172,7 @@ const Navbar = () => {
                 abortControllerRef.current = controller;
 
                 // Build URL with brand parameter if selected
-                let url = `https://react-api-script.onrender.com/gcpl/wallet_balance?platform=${operatorName}`;
+                let url = `https://react-api-script.onrender.com/sugar/wallet_balance?platform=${operatorName}`;
                 if (selectedBrand) {
                     url += `&brand_name=${encodeURIComponent(selectedBrand)}`;
                 }
@@ -375,7 +375,7 @@ const Navbar = () => {
                         <Accordion.Item eventKey="0">
                             <Accordion.Header>Activation</Accordion.Header>
                             <Accordion.Body>
-                                {["Flipkart","Amazon","Zepto","Swiggy","BigBasket"].includes(operatorName) && (
+                                {["Blinkit","Amazon","Zepto","Swiggy","BigBasket"].includes(operatorName) && (
                                     <RedirectLink
                                         url={`/${operatorTypeParams === ""
                                             ? `?operator=${OPERATOR.AMAZON}`
@@ -393,7 +393,7 @@ const Navbar = () => {
                                         }
                                     />
                                 )}
-                                {["Amazon","Zepto","BigBasket","Flipkart"].includes(operatorName) && (
+                                {["Amazon","Zepto","BigBasket","Blinkit"].includes(operatorName) && (
                                     <RedirectLink
                                         url={`/rules${operatorTypeParams === ""
                                             ? `?operator=${OPERATOR.AMAZON}`
@@ -411,7 +411,7 @@ const Navbar = () => {
                                         }
                                     />
                                 )}
-                                {!["Flipkart","Amazon","Zepto"].includes(operatorName) && (
+                                {!["Blinkit","Amazon","Zepto"].includes(operatorName) && (
                                     <RedirectLink
                                         url={`/keyword-analysis${operatorTypeParams === ""
                                             ? `?operator=${OPERATOR.AMAZON}`
@@ -429,7 +429,7 @@ const Navbar = () => {
                                         }
                                     />
                                 )}
-                                {!["Flipkart","Amazon","Zepto","Swiggy","BigBasket"].includes(operatorName) && (
+                                {!["Blinkit","Amazon","Zepto","Swiggy","BigBasket"].includes(operatorName) && (
                                     <RedirectLink
                                         url={`/product-analytics${operatorTypeParams === ""
                                             ? `?operator=${OPERATOR.AMAZON}`
@@ -465,7 +465,7 @@ const Navbar = () => {
                                         }
                                     />
                                 )}
-                                {["Flipkart","Amazon","Zepto","Swiggy"].includes(operatorName) && (
+                                {["Blinkit","Amazon","Zepto","Swiggy"].includes(operatorName) && (
                                     <RedirectLink
                                         url={`/history${operatorTypeParams === ""
                                             ? `?operator=${OPERATOR.AMAZON}`

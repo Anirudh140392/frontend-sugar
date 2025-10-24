@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useEffect } from "react";
+import { useState, useCallback, useMemo, useEffect, useRef } from "react";
 import OverviewContext from "./overviewContext";
 import { subDays, format } from "date-fns";
 import { useSearchParams } from "react-router";
@@ -21,7 +21,7 @@ const OverviewState = (props) => {
         },
     ]);
 
-    const formatDate = (date) => format(date, "yyyy-MM-dd");
+    const formatDate = useCallback((date) => format(date, "yyyy-MM-dd"), []);
 
     const [overviewData, setOverviewData] = useState({})
     const [brands, setBrands] = useState({})
@@ -29,9 +29,12 @@ const OverviewState = (props) => {
     const [campaignName, setCampaignName] = useState("")
     const [overviewLoading, setOverviewLoading] = useState(false);
 
-    const campaignSetter = (value) => {
+    // Track if API call is in progress to prevent duplicate calls
+    const apiCallInProgress = useRef(false);
+
+    const campaignSetter = useCallback((value) => {
         setCampaignName(value)
-    }
+    }, []);
 
     const fetchAPI = async (endpoint, setLoadingState) => {
         if (!operator) return;
@@ -39,6 +42,7 @@ const OverviewState = (props) => {
         const token = localStorage.getItem("accessToken");
         if (!token) {
             console.error("No access token found");
+            setLoadingState(false);
             return;
         }
 
@@ -46,7 +50,7 @@ const OverviewState = (props) => {
         const endDate = formatDate(dateRange[0].endDate);
 
         try {
-            let url = `${host}/gcpl/${endpoint}?start_date=${startDate}&end_date=${endDate}&platform=${operator}`;
+            let url = `${host}/sugar/${endpoint}?start_date=${startDate}&end_date=${endDate}&platform=${operator}`;
             if (selectedBrand && typeof selectedBrand === "string") {
                 url += `&brand_name=${encodeURIComponent(selectedBrand)}`;
             }
@@ -123,11 +127,20 @@ const OverviewState = (props) => {
 
     const getOverviewData = useCallback(async (forceRefresh = false) => {
         if (!operator) return;
+        
+        // Prevent duplicate calls
+        if (apiCallInProgress.current && !forceRefresh) {
+            return;
+        }
+        
+        apiCallInProgress.current = true;
         setOverviewLoading(true);
+        
         const token = localStorage.getItem("accessToken");
         if (!token) {
             console.error("No access token found");
             setOverviewLoading(false);
+            apiCallInProgress.current = false;
             return;
         }
 
@@ -135,7 +148,7 @@ const OverviewState = (props) => {
         const endDate = formatDate(dateRange[0].endDate);
         const ts = forceRefresh ? `&_=${Date.now()}` : "";
 
-        let url = `${host}/gcpl/home?start_date=${startDate}&end_date=${endDate}&platform=${operator}${ts}`;
+        let url = `${host}/sugar/home?start_date=${startDate}&end_date=${endDate}&platform=${operator}${ts}`;
         if (selectedBrand && typeof selectedBrand === "string") {
             url += `&brand_name=${encodeURIComponent(selectedBrand)}`;
         }
@@ -149,6 +162,7 @@ const OverviewState = (props) => {
                 if (cached) {
                     setOverviewData(cached);
                     setOverviewLoading(false);
+                    apiCallInProgress.current = false;
                     return;
                 }
             }
@@ -175,8 +189,9 @@ const OverviewState = (props) => {
             setOverviewData({});
         } finally {
             setOverviewLoading(false);
+            apiCallInProgress.current = false;
         }
-    }, [dateRange, operator, selectedBrand, formatDate, host]);
+    }, [dateRange, operator, selectedBrand, formatDate]);
 
     useEffect(() => {
         setCampaignName("")
@@ -194,9 +209,9 @@ const OverviewState = (props) => {
             formatDate,
             brands,
             campaignName,
-            selectedBrand // Add selectedBrand to context
+            selectedBrand
         }),
-        [dateRange, overviewData, campaignSetter, overviewLoading, campaignName, brands, selectedBrand, getOverviewData, getBrandsData]
+        [dateRange, overviewData, overviewLoading, campaignName, brands, selectedBrand, getOverviewData, getBrandsData, campaignSetter, formatDate]
     );
 
     return (

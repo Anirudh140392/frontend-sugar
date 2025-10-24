@@ -46,7 +46,7 @@ const BudgetCell = ({
       };
 
       const response = await fetch(
-        `https://react-api-script.onrender.com/gcpl/budget-change?platform=${platform}`,
+        `https://react-api-script.onrender.com/sugar/budget-change?platform=${platform}`,
         {
           method: "PUT",
           headers: {

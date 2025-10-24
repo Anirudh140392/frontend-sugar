@@ -43,7 +43,7 @@ const ExistingKeywordsDatatable = () => {
         const endDate = formatDate(dateRange[0].endDate);
 
         try {
-            const url = `https://react-api-script.onrender.com/gcpl/negative_keyword?start_date=${startDate}&end_date=${endDate}&platform=${operator}`;
+            const url = `https://react-api-script.onrender.com/sugar/negative_keyword?start_date=${startDate}&end_date=${endDate}&platform=${operator}`;
             const cacheKey = `cache:GET:${url}`;
 
             // Check cache first
@@ -117,7 +117,7 @@ const ExistingKeywordsDatatable = () => {
         });
 
         try {
-            const response = await fetch(`https://react-api-script.onrender.com/gcpl/delete_negative_keyword?${params.toString()}`, {
+            const response = await fetch(`https://react-api-script.onrender.com/sugar/delete_negative_keyword?${params.toString()}`, {
                 method: "DELETE",
                 headers: {
                     "Content-Type": "application/json",

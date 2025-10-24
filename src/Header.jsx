@@ -41,8 +41,8 @@ const Header = () => {
     {"baccount": "K4ZBBTIP0R", "aaccount": "GGRG6OJKHMNQ", "brand": "Kamasutra Nationals"}
   ];
 
-  // Available operators - Only Flipkart
-  const availableOperators = ["Flipkart"];
+  // Available operators - Flipkart, Zepto, and Blinkit
+  const availableOperators = ["Blinkit"];
 
   // Get unique brands for dropdown
   const uniqueBrands = React.useMemo(() => {
@@ -111,7 +111,19 @@ const Header = () => {
     }
   }, [searchParams]);
 
-  const options = [{ label: "GCPL", value: "GCPL" }];
+  // Check if brand dropdown should be shown
+  const shouldShowBrandDropdown = () => {
+    const isZeptoOperator = showSelectedOperator === "Zepto";
+    const isValidPage = location.pathname === "/" ||
+      location.pathname === "/performance-overview" ||
+      location.pathname === "/campaigns" ||
+      location.pathname === "/keywords" ||
+      location.pathname === "/products";
+    
+    return isZeptoOperator && isValidPage;
+  };
+
+  const options = [{ label: "sugar", value: "sugar" }];
 
   const onHamburgerClick = () => {
     let sideNavMain = document.getElementsByClassName(
@@ -156,7 +168,7 @@ const Header = () => {
           </div>
         </div>
         <div className="d-flex actions-con">
-          {/* Operator Dropdown - Only Flipkart */}
+          {/* Operator Dropdown */}
           <Dropdown className="operator-selected-tab">
             <Dropdown.Toggle variant="white" id="dropdown-basic">
               {showSelectedOperator || "Select Platform"}
@@ -173,12 +185,8 @@ const Header = () => {
             </Dropdown.Menu>
           </Dropdown>
 
-          {/* Brand Dropdown - only show on home/overview/campaigns/keywords/products pages */}
-          {(location.pathname === "/" ||
-            location.pathname === "/performance-overview" ||
-            location.pathname === "/campaigns" ||
-            location.pathname === "/keywords" ||
-            location.pathname === "/products") && (
+          {/* Brand Dropdown - only show when operator is Zepto and on specific pages */}
+          {shouldShowBrandDropdown() && (
             <Box sx={{ minWidth: 200, mx: 1 }}>
               <FormControl fullWidth size="small">
                 <InputLabel

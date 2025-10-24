@@ -128,7 +128,7 @@ const SmartControlDatatable = () => {
 
     try {
       const response = await fetch(
-        `https://react-api-script.onrender.com/gcpl/displayrules?platform=${operator}`,
+        `https://react-api-script.onrender.com/sugar/displayrules?platform=${operator}`,
         {
           method: "GET",
           headers: {
@@ -296,7 +296,7 @@ const SmartControlDatatable = () => {
 
     try {
       const response = await fetch(
-        `https://react-api-script.onrender.com/gcpl/play-pause-rule?rule_id=${ruleId}&platform=${operator}`,
+        `https://react-api-script.onrender.com/sugar/play-pause-rule?rule_id=${ruleId}&platform=${operator}`,
         {
           method: "PUT",
           headers: {
@@ -348,7 +348,7 @@ const SmartControlDatatable = () => {
 
     try {
       const response = await fetch(
-        `https://react-api-script.onrender.com/gcpl/delete-rule?rule_id=${ruleId}&platform=${operator}`,
+        `https://react-api-script.onrender.com/sugar/delete-rule?rule_id=${ruleId}&platform=${operator}`,
         {
           method: "DELETE",
           headers: {

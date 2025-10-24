@@ -82,7 +82,7 @@ const PlacementsComponent = () => {
         const endDate = formatDate(dateRange[0].endDate);
         const ts = forceRefresh ? `&_=${Date.now()}` : "";
 
-        let url = `https://react-api-script.onrender.com/gcpl/placement?start_date=${startDate}&end_date=${endDate}&platform=${operator}${ts}`;
+        let url = `https://react-api-script.onrender.com/sugar/placement?start_date=${startDate}&end_date=${endDate}&platform=${operator}${ts}`;
         if (selectedBrand && typeof selectedBrand === "string") {
             url += `&brand_name=${encodeURIComponent(selectedBrand)}`;
         }

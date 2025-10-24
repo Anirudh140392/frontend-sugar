@@ -233,115 +233,32 @@ const CampaignsComponent = (props, ref) => {
         align: "left",
         headerAlign: "left",
     },
-    {
-        field: "ctr", // Changed from "ctr_y"
-        headerName: "CTR",
+     {
+        field: "avg_cpm",
+        headerName: "CPM",
         minWidth: 150,
-        renderCell: (params) => {
-            // Calculate CTR if not provided
-            const ctr = params.row.ctr ?? (params.row.impressions > 0 ? (params.row.clicks / params.row.impressions) * 100 : 0);
-            const ctr_change = params.row.ctr_change ?? 0; // Changed from ctr_diff
-            return (
-                <ColumnPercentageDataComponent 
-                    mainValue={ctr} 
-                    percentValue={ctr_change} 
-                />
-            );
-        }, 
+        renderCell: (params) => (
+            <ColumnPercentageDataComponent mainValue={params.row.avg_cpm} percentValue={params.row.avg_cpm_change} />
+        ), 
         type: "number", 
         align: "left",
         headerAlign: "left",
     },
-    {
-        field: "cvr",
-        headerName: "CVR",
-        minWidth: 150,
-        renderCell: (params) => {
-            // Calculate CVR if not provided
-            const cvr = params.row.cvr ?? (params.row.clicks > 0 ? (params.row.orders / params.row.clicks) * 100 : 0);
-            const cvr_change = params.row.cvr_change ?? 0; // Changed from cvr_diff
-            return (
-                <ColumnPercentageDataComponent 
-                    mainValue={cvr} 
-                    percentValue={cvr_change} 
-                />
-            );
-        }, 
-        type: "number", 
-        align: "left",
-        headerAlign: "left",
-    },
-    {
-        field: "cpc",
-        headerName: "CPC",
-        minWidth: 150,
-        renderCell: (params) => {
-            // Calculate CPC if not provided
-            const cpc = params.row.cpc ?? (params.row.clicks > 0 ? params.row.spend / params.row.clicks : 0);
-            const cpc_change = params.row.cpc_change ?? 0; // Changed from cpc_diff
-            return (
-                <ColumnPercentageDataComponent 
-                    mainValue={cpc} 
-                    percentValue={cpc_change} 
-                />
-            );
-        }, 
-        type: "number", 
-        align: "left",
-        headerAlign: "left",
-    },
-    {
-        field: "roas", // Changed from "roi_y"
-        headerName: "ROAS", // Changed from "ROI"
+     {
+        field: "total_atc", // Changed from "total_converted_revenue_y"
+        headerName: "ATC",
         minWidth: 150,
         renderCell: (params) => (
             <ColumnPercentageDataComponent 
-                mainValue={params.row.roas} 
-                percentValue={params.row.roas_change} // Changed from roi_diff
+                mainValue={params.row.total_atc} 
+                percentValue={params.row.total_atc_change} // Changed from total_converted_revenue_diff
             />
         ), 
         type: "number", 
         align: "left",
         headerAlign: "left",
     },
-    {
-        field: "acos",
-        headerName: "ACOS",
-        minWidth: 150,
-        renderCell: (params) => {
-            // Calculate ACOS if not provided (ACOS = spend / sales * 100)
-            const acos = params.row.acos ?? (params.row.sales > 0 ? (params.row.spend / params.row.sales) * 100 : 0);
-            const acos_change = params.row.acos_change ?? 0; // Changed from acos_diff
-            return (
-                <ColumnPercentageDataComponent 
-                    mainValue={acos} 
-                    percentValue={acos_change} 
-                />
-            );
-        }, 
-        type: "number", 
-        align: "left",
-        headerAlign: "left",
-    },
-    {
-        field: "aov",
-        headerName: "AOV",
-        minWidth: 150,
-        renderCell: (params) => {
-            // Calculate AOV if not provided
-            const aov = params.row.aov ?? (params.row.orders > 0 ? params.row.sales / params.row.orders : 0);
-            const aov_change = params.row.aov_change ?? 0; // Changed from aov_diff
-            return (
-                <ColumnPercentageDataComponent 
-                    mainValue={aov} 
-                    percentValue={aov_change} 
-                />
-            );
-        }, 
-        type: "number", 
-        align: "left",
-        headerAlign: "left",
-    }
+  
 ];
     const normalizedBrands = useMemo(() => {
         const source = brands;

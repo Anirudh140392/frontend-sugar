@@ -122,7 +122,7 @@ const SuggestedKeywordsDatatable = () => {
         });
 
        try {
-    const url = `https://react-api-script.onrender.com/samsonite/add_negative_keyword`;
+    const url = `https://react-api-script.onrender.com/sugar/add-negative-keyword`;
     const cacheKey = `cache:POST:${url}:${params.toString()}`; // Adjusted for POST caching
     const cached = getCache(cacheKey);
 
@@ -439,11 +439,7 @@ const SuggestedKeywordsDatatable = () => {
         headerName: "CAMPAIGN TYPE", // Changed from "AD GROUP"
         minWidth: 150,
     },
-    { 
-        field: "campaign_type", // Duplicate - you may want to remove this
-        headerName: "TYPE", 
-        minWidth: 150 
-    },
+   
     { 
         field: "keyword_type", // Changed from "match_type"
         headerName: "MATCH TYPE", 
@@ -524,25 +520,7 @@ const SuggestedKeywordsDatatable = () => {
         align: "left",
         headerAlign: "left",
     },
-    {
-        field: "aov",
-        headerName: "AOV",
-        minWidth: 150,
-        renderCell: (params) => {
-            // Calculate AOV since it's not in the response
-            const aov = params.row.orders > 0 ? params.row.sales / params.row.orders : 0;
-            // AOV change would need to be calculated if you have previous period data
-            return (
-                <ColumnPercentageDataComponent 
-                    mainValue={aov.toFixed(2)} 
-                    percentValue={params.row.aov_change || 0} 
-                />
-            );
-        }, 
-        type: "number", 
-        align: "left",
-        headerAlign: "left",
-    },
+    
     {
         field: "avg_cpm", // Changed from "cpm"
         headerName: "CPM",
@@ -557,42 +535,8 @@ const SuggestedKeywordsDatatable = () => {
         align: "left",
         headerAlign: "left",
     },
-    {
-        field: "ctr",
-        headerName: "CTR",
-        minWidth: 150,
-        renderCell: (params) => {
-            // Calculate CTR since it's not in the response
-            const ctr = params.row.impressions > 0 ? (params.row.clicks / params.row.impressions) * 100 : 0;
-            return (
-                <ColumnPercentageDataComponent 
-                    mainValue={ctr.toFixed(2)} 
-                    percentValue={params.row.ctr_change || 0} 
-                />
-            );
-        }, 
-        type: "number", 
-        align: "left",
-        headerAlign: "left",
-    },
-    {
-        field: "cpc",
-        headerName: "CPC",
-        minWidth: 150,
-        renderCell: (params) => {
-            // Calculate CPC since it's not in the response
-            const cpc = params.row.clicks > 0 ? params.row.spend / params.row.clicks : 0;
-            return (
-                <ColumnPercentageDataComponent 
-                    mainValue={cpc.toFixed(2)} 
-                    percentValue={params.row.cpc_change || 0} 
-                />
-            );
-        }, 
-        type: "number", 
-        align: "left",
-        headerAlign: "left",
-    },
+   
+   
     {
         field: "roas",
         headerName: "ROAS",

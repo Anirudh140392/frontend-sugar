@@ -191,6 +191,38 @@ const KeywordsComponent = () => {
         headerAlign: "left", 
     },
     {
+            field: "cpc",
+            headerName: "BID",
+            minWidth: 150,
+            renderCell: (params) => (
+                <BidCell
+                    value={params.row.avg_cpm}
+                    campaignId={params.row.campaign_id}
+                    platform={operator}
+                    keyword={params.row.keyword}
+                    matchType={params.row.keyword_type}
+                    onUpdate={(campaignId, keyword, newBid, matchType) => {
+                        console.log("Updating bid:", { campaignId, keyword, newBid, matchType });
+                        setKeywordsData(prevData => {
+                            const updatedData = {
+                                ...prevData,
+                                data: prevData.data.map(row =>
+                                    row.campaign_id === campaignId &&
+                                        row.keyword === keyword &&
+                                        row.keyword_type === matchType
+                                        ? { ...row, avg_cpm: newBid }
+                                        : row
+                                )
+                            };
+                            console.log("Updated keywordsData:", updatedData);
+                            return updatedData;
+                        });
+                    }} onSnackbarOpen={handleSnackbarOpen}
+                />
+            ), type: "number", align: "left",
+            headerAlign: "left",
+        },
+    {
         field: "impressions",
         headerName: "IMPRESSIONS",
         minWidth: 150,
@@ -245,52 +277,8 @@ const KeywordsComponent = () => {
         align: "left",
         headerAlign: "left",
     },
-    {
-        field: "cpc",
-        headerName: "CPC",
-        minWidth: 150,
-        renderCell: (params) => {
-            // Calculate CPC since it's not in the response
-            const cpc = params.row.clicks > 0 ? params.row.spend / params.row.clicks : 0;
-            // You'll need to calculate cpc_change as well
-            return (
-                <ColumnPercentageDataComponent mainValue={cpc.toFixed(2)} percentValue={0} />
-            );
-        }, 
-        type: "number", 
-        align: "left",
-        headerAlign: "left",
-    },
-    {
-        field: "ctr",
-        headerName: "CTR",
-        minWidth: 150,
-        renderCell: (params) => {
-            // Calculate CTR since it's not in the response
-            const ctr = params.row.impressions > 0 ? (params.row.clicks / params.row.impressions) * 100 : 0;
-            return (
-                <NewPercentageDataComponent firstValue={ctr.toFixed(2)} secValue={0} />
-            );
-        }, 
-        type: "number", 
-        align: "left",
-        headerAlign: "left",
-    },
-    {
-        field: "cvr",
-        headerName: "CVR",
-        minWidth: 150,
-        renderCell: (params) => {
-            // Calculate CVR since it's not in the response
-            const cvr = params.row.clicks > 0 ? (params.row.orders / params.row.clicks) * 100 : 0;
-            return (
-                <NewPercentageDataComponent firstValue={cvr.toFixed(2)} secValue={0} />
-            );
-        }, 
-        type: "number", 
-        align: "left",
-        headerAlign: "left",
-    },
+   
+  
     {
         field: "roas",
         headerName: "ROAS",
@@ -302,21 +290,20 @@ const KeywordsComponent = () => {
         align: "left",
         headerAlign: "left",
     },
+    
+
     {
-        field: "aov",
-        headerName: "AOV",
+        field: "total_atc",
+        headerName: "ATC",
         minWidth: 150,
-        renderCell: (params) => {
-            // Calculate AOV since it's not in the response
-            const aov = params.row.orders > 0 ? params.row.sales / params.row.orders : 0;
-            return (
-                <ColumnPercentageDataComponent mainValue={aov.toFixed(2)} percentValue={0} />
-            );
-        }, 
+        renderCell: (params) => (
+            <ColumnPercentageDataComponent mainValue={params.row.total_atc} percentValue={params.row.total_atc_change} />
+        ), 
         type: "number", 
         align: "left",
         headerAlign: "left",
     },
+   
     {
         field: "campaign_name",
         headerName: "CAMPAIGN",

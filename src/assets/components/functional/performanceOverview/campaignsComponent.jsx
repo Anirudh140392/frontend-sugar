@@ -27,7 +27,8 @@ const CampaignsComponent = (props, ref) => {
         show: false, 
         campaignId: null, 
         campaignType: null,
-        adType: null 
+        adType: null,
+        currentStatus: null
     });
     const [snackbar, setSnackbar] = useState({ open: false, message: "", severity: "success" });
 
@@ -45,8 +46,9 @@ const CampaignsComponent = (props, ref) => {
     const isComponentActive = useRef(true);
 
     const STATUS_OPTIONS = [
-        { value: 1, label: 'Active' },
-        { value: 0, label: 'Paused' }
+        { value: 'ACTIVE', label: 'Active' },
+        { value: 'ON_HOLD', label: 'On Hold' },
+        { value: 'STOPPED', label: 'Stopped' }
     ]
 
     // Utility function to clear all campaign-related caches
@@ -66,200 +68,178 @@ const CampaignsComponent = (props, ref) => {
         }
     };
 
-  const CampaignsColumnBlinkit = [
-    {
-        field: "campaign_name",
-        headerName: "CAMPAIGN",
-        minWidth: 200,
-        renderCell: (params) => (
-            <Box
-                sx={{
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: 0.5,
-                    cursor: "pointer"
-                }}
-                onClick={() => handleCampaignClick(params.row.campaign_name, params.row.campaign_id)}
-                className="redirect"
-            >
-                {params.row.campaign_name}
-            </Box>
-        ),
-    },
-    {
-        field: "budget", // Changed from "Budget" to match API response
-        headerName: "BUDGET",
-        minWidth: 200,
-        renderCell: (params) => <BudgetCell 
-            status={params.row.status} // Changed from campaign_status
-            value={params.row.budget} // Changed from Budget
-            campaignId={params.row.campaign_id} 
-            adType={params.row.campaign_type} // Changed from ad_type
-            brand={selectedBrand} // Use selectedBrand from context
-            endDate={params.row.end_date || null} 
-            platform={operator}
-            onUpdate={(campaignId, newBudget) => {
-                console.log("Updating campaign:", campaignId, "New budget:", newBudget);
-                dataMutated.current = true;
-                clearCampaignCaches();
-                setCampaignsData(prevData => {
-                    const updatedData = {
-                        ...prevData,
-                        data: prevData.data.map(campaign =>
-                            campaign.campaign_id === campaignId
-                                ? { ...campaign, budget: newBudget } // Changed Budget to budget
-                                : campaign
-                        )
-                    };
-                    console.log("Updated campaignsData:", updatedData);
-                    return updatedData;
-                });
-            }} 
-            onSnackbarOpen={handleSnackbarOpen} 
-        />,
-        headerAlign: "left",
-        type: "number", 
-        align: "left",
-    },
-    {
-        field: "status",
-        headerName: "STATUS",
-        minWidth: 100,
-        align: "center",
-        headerAlign: "center",
-        renderCell: (params) => {
-            const status = params.row.status;
+    // Helper function to determine if toggle should be "on"
+    // ON (true) = ACTIVE or ON_HOLD
+    // OFF (false) = STOPPED
+    const isStatusActive = (status) => {
+        if (!status) return false;
+        const statusStr = String(status).toUpperCase().trim();
+        return statusStr === 'ACTIVE' || statusStr === 'ON_HOLD';
+    };
 
-            if (updatingCampaigns[params.row.campaign_id]) {
-                return (
-                    <Box sx={{ height: "100%", display: "flex", justifyContent: "center", alignItems: "center" }}>
-                        <CircularProgress size={24} />
-                    </Box>
-                );
-            }
-
-            // Handle both numeric and string status values
-            const isActive = status === 1 || status === "1" || status === "ACTIVE" || status === "active";
-
-            return (
-                <Switch
-                    checked={isActive}
-                    onChange={() => handleToggle(
-                        params.row.campaign_id,
-                        isActive ? 0 : 1,
-                        params.row.campaign_type // Changed from ad_type
-                    )}
-                />
-            );
+    const CampaignsColumnBlinkit = [
+        {
+            field: "campaign_name",
+            headerName: "CAMPAIGN",
+            minWidth: 200,
+            renderCell: (params) => (
+                <Box
+                    sx={{
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: 0.5,
+                        cursor: "pointer"
+                    }}
+                    onClick={() => handleCampaignClick(params.row.campaign_name, params.row.campaign_id)}
+                    className="redirect"
+                >
+                    {params.row.campaign_name}
+                </Box>
+            ),
         },
-        type: "singleSelect",
-        valueOptions: [
-            { value: 1, label: "Active" },
-            { value: 0, label: "Paused" }
-        ]
-    },
-    {
-        field: "campaign_type", // Changed from "ad_type"
-        headerName: "CAMPAIGN TYPE",
-        minWidth: 155,
-    },
-    {
-        field: "impressions", // Changed from "views_y"
-        headerName: "IMPRESSIONS",
-        minWidth: 150,
-        renderCell: (params) => (
-            <ColumnPercentageDataComponent 
-                mainValue={params.row.impressions} 
-                percentValue={params.row.impressions_change} // Changed from views_diff
-            />
-        ), 
-        type: "number", 
-        align: "left",
-        headerAlign: "left",
-    },
-    {
-        field: "clicks", // Changed from "clicks_y"
-        headerName: "CLICKS",
-        minWidth: 150,
-        renderCell: (params) => (
-            <ColumnPercentageDataComponent 
-                mainValue={params.row.clicks} 
-                percentValue={params.row.clicks_change} // Changed from clicks_diff
-            />
-        ), 
-        type: "number", 
-        align: "left",
-        headerAlign: "left",
-    },
-    {
-        field: "spend", // Changed from "cost_y"
-        headerName: "SPENDS",
-        minWidth: 150,
-        renderCell: (params) => (
-            <ColumnPercentageDataComponent 
-                mainValue={params.row.spend} 
-                percentValue={params.row.spend_change} // Changed from cost_diff
-            />
-        ), 
-        type: "number", 
-        align: "left",
-        headerAlign: "left",
-    },
-    {
-        field: "orders", // Changed from "total_converted_units_y"
-        headerName: "ORDERS",
-        minWidth: 150,
-        renderCell: (params) => (
-            <ColumnPercentageDataComponent 
-                mainValue={params.row.orders} 
-                percentValue={params.row.orders_change} // Changed from total_converted_units_diff
-            />
-        ), 
-        type: "number", 
-        align: "left",
-        headerAlign: "left",
-    },
-    {
-        field: "sales", // Changed from "total_converted_revenue_y"
-        headerName: "SALES",
-        minWidth: 150,
-        renderCell: (params) => (
-            <ColumnPercentageDataComponent 
-                mainValue={params.row.sales} 
-                percentValue={params.row.sales_change} // Changed from total_converted_revenue_diff
-            />
-        ), 
-        type: "number", 
-        align: "left",
-        headerAlign: "left",
-    },
-     {
-        field: "avg_cpm",
-        headerName: "CPM",
-        minWidth: 150,
-        renderCell: (params) => (
-            <ColumnPercentageDataComponent mainValue={params.row.avg_cpm} percentValue={params.row.avg_cpm_change} />
-        ), 
-        type: "number", 
-        align: "left",
-        headerAlign: "left",
-    },
-     {
-        field: "total_atc", // Changed from "total_converted_revenue_y"
-        headerName: "ATC",
-        minWidth: 150,
-        renderCell: (params) => (
-            <ColumnPercentageDataComponent 
-                mainValue={params.row.total_atc} 
-                percentValue={params.row.total_atc_change} // Changed from total_converted_revenue_diff
-            />
-        ), 
-        type: "number", 
-        align: "left",
-        headerAlign: "left",
-    },
-  
-];
+        {
+            field: "budget",
+            headerName: "BUDGET",
+            minWidth: 200,
+            renderCell: (params) => <BudgetCell 
+                status={params.row.campaign_status} 
+                value={params.row.budget} 
+                campaignId={params.row.campaign_id} 
+                adType={params.row.ad_type}
+                brand={params.row.brand} 
+                endDate={params.row.end_date || null} 
+                platform={operator}
+                onUpdate={(campaignId, newBudget) => {
+                    console.log("Updating campaign:", campaignId, "New budget:", newBudget);
+                    // Mark that data was mutated
+                    dataMutated.current = true;
+                    // Clear cache so next fetch gets fresh data
+                    clearCampaignCaches();
+                    // Optimistically update local state
+                    setCampaignsData(prevData => {
+                        const updatedData = {
+                            ...prevData,
+                            data: prevData.data.map(campaign =>
+                                campaign.campaign_id === campaignId
+                                    ? { ...campaign, Budget: newBudget }
+                                    : campaign
+                            )
+                        };
+                        console.log("Updated campaignsData:", updatedData);
+                        return updatedData;
+                    });
+                }} 
+                onSnackbarOpen={handleSnackbarOpen} 
+            />,
+            headerAlign: "left",
+            type: "number", 
+            align: "left",
+        },
+        {
+            field: "status",
+            headerName: "STATUS",
+            minWidth: 100,
+            align: "center",
+            headerAlign: "center",
+            renderCell: (params) => {
+                const status = params.row.status;
+
+                if (updatingCampaigns[params.row.campaign_id]) {
+                    return (
+                        <Box sx={{ height: "100%", display: "flex", justifyContent: "center", alignItems: "center" }}>
+                            <CircularProgress size={24} />
+                        </Box>
+                    );
+                }
+
+                // Toggle is ON for ACTIVE or ON_HOLD
+                // Toggle is OFF for STOPPED
+                const isActive = isStatusActive(status);
+
+                return (
+                    <Switch
+                        checked={isActive}
+                        onChange={() => handleToggle(
+                            params.row.campaign_id,
+                            status,
+                            
+                        )}
+                    />
+                );
+            },
+            type: "singleSelect",
+            valueOptions: STATUS_OPTIONS
+        },
+        {
+            field: "campaign_type",
+            headerName: "CAMPAIGN TYPE",
+            minWidth: 155,
+        },
+        {
+            field: "impressions",
+            headerName: "IMPRESSIONS",
+            minWidth: 150,
+            renderCell: (params) => (
+                <ColumnPercentageDataComponent mainValue={params.row.impressions} percentValue={params.row.impressions_change} />
+            ), type: "number", align: "left",
+            headerAlign: "left",
+        },
+        {
+            field: "clicks",
+            headerName: "CLICKS",
+            minWidth: 150,
+            renderCell: (params) => (
+                <ColumnPercentageDataComponent mainValue={params.row.clicks} percentValue={params.row.clicks_change} />
+            ), type: "number", align: "left",
+            headerAlign: "left",
+        },
+        {
+            field: "spend",
+            headerName: "SPENDS",
+            minWidth: 150,
+            renderCell: (params) => (
+                <ColumnPercentageDataComponent mainValue={params.row.spend} percentValue={params.row.spend_change} />
+            ), type: "number", align: "left",
+            headerAlign: "left",
+        },
+        {
+            field: "orders",
+            headerName: "ORDERS",
+            minWidth: 150,
+            renderCell: (params) => (
+                <ColumnPercentageDataComponent mainValue={params.row.orders} percentValue={params.row.orders_change} />
+            ), type: "number", align: "left",
+            headerAlign: "left",
+        },
+        {
+            field: "sales",
+            headerName: "SALES",
+            minWidth: 150,
+            renderCell: (params) => (
+                <ColumnPercentageDataComponent mainValue={params.row.sales} percentValue={params.row.sales_change} />
+            ), type: "number", align: "left",
+            headerAlign: "left",
+        },
+        {
+            field: "avg_cpm",
+            headerName: "CPM",
+            minWidth: 150,
+            renderCell: (params) => (
+                <ColumnPercentageDataComponent mainValue={params.row.avg_cpm} percentValue={params.row.avg_cpm_change} />
+            ), type: "number", align: "left",
+            headerAlign: "left",
+        },
+        {
+            field: "roas",
+            headerName: "ROI",
+            minWidth: 150,
+            renderCell: (params) => (
+                <ColumnPercentageDataComponent mainValue={params.row.roas} percentValue={params.row.roas_change} />
+            ), type: "number", align: "left",
+            headerAlign: "left",
+        }
+    ];
+
     const normalizedBrands = useMemo(() => {
         const source = brands;
         if (!source) return [];
@@ -337,6 +317,7 @@ const CampaignsComponent = (props, ref) => {
             }
 
             const data = await response.json();
+            console.log("Campaigns data fetched:", data);
             setCampaignsData(data);
             if (forceRefresh) {
                 try { setCache(cacheKey, data, 5 * 60 * 1000); } catch (_) {}
@@ -452,84 +433,87 @@ const CampaignsComponent = (props, ref) => {
         }
     };
 
-    const handleToggle = (campaignId, newStatus, adType) => {
+    const handleToggle = (campaignId, currentStatus) => {
+        // Determine new status based on current status
+        const statusStr = String(currentStatus).toUpperCase().trim();
+        let newStatus;
+        
+        if (statusStr === 'ACTIVE' || statusStr === 'ON_HOLD') {
+            newStatus = 'STOPPED';
+        } else {
+            newStatus = 'ACTIVE';
+        }
+        
         setConfirmation({ 
             show: true, 
             campaignId, 
-            campaignType: newStatus,
-            adType
+            campaignType: statusStr,
+            adType: null,
+            currentStatus
         });
     };
 
     const updateCampaignStatus = (campaignId, newStatus, adType) => {
-        setConfirmation({ show: false, campaignId: null, campaignType: null, adType: null });
+        setConfirmation({ show: false, campaignId: null, campaignType: null, adType: null, currentStatus: null });
         setUpdatingCampaigns(prev => ({ ...prev, [campaignId]: true }));
         confirmStatusChange(campaignId, newStatus, adType);
     };
 
-    const confirmStatusChange = async (campaignId, newStatus, adType) => {
-        try {
-            const token = localStorage.getItem("accessToken");
-            
-            const requestBody = {
-                campaign_id: campaignId,
-                ad_type: adType,
-                brand: selectedBrand
-            };
+   const confirmStatusChange = async (campaignId, newStatus, adType) => {
+    try {
+        const token = localStorage.getItem("accessToken");
+        
+        const requestBody = {
+            platform: operator,
+            campaign_id: campaignId,
+            status: newStatus
+        };
 
-            const playPauseUrl = `https://react-api-script.onrender.com/sugar/campaign-play-pause?platform=${operator}`;
+        const playPauseUrl = `https://react-api-script.onrender.com/sugar/play-pause`;
 
-            const response = await fetch(playPauseUrl, {
-                method: "PUT",
-                headers: {
-                    "Content-Type": "application/json",
-                    Authorization: `Bearer ${token}`,
-                },
-                body: JSON.stringify(requestBody)
-            });
+        console.log("Sending play-pause request:", requestBody);
 
-            if (!response.ok) {
-                throw new Error(`Failed to update campaign status: ${response.status} ${response.statusText}`);
-            }
+        const response = await fetch(playPauseUrl, {
+            method: "PUT",
+            headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify(requestBody)
+        });
 
-            const data = await response.json();
-            console.log("Campaign status updated successfully", data);
-
-            // Mark that data was mutated (for next navigation/filter change)
-            dataMutated.current = true;
-            
-            // Clear all campaign-related caches so next fetch gets fresh data
-            clearCampaignCaches();
-
-            // Update local state with the new status (optimistic update)
-            // Use the status returned from API, or fallback to newStatus
-            const updatedStatus = data.status !== undefined ? data.status : newStatus;
-            
-            setCampaignsData(prevData => ({
-                ...prevData,
-                data: prevData.data.map(campaign =>
-                    campaign.campaign_id === campaignId
-                        ? { ...campaign, status: updatedStatus }
-                        : campaign
-                )
-            }));
-
-            setUpdatingCampaigns(prev => ({ ...prev, [campaignId]: false }));
-            handleSnackbarOpen(data.message || "Campaign status updated successfully!", "success");
-            
-            // DON'T fetch fresh data immediately - rely on optimistic update
-            // Fresh data will be fetched on next navigation/filter change due to dataMutated flag
-            
-        } catch (error) {
-            console.error("Error updating campaign status:", error);
-            handleSnackbarOpen("Error updating campaign status", "error");
-            setUpdatingCampaigns(prev => ({ ...prev, [campaignId]: false }));
-            
-            // On error, revert the UI by fetching fresh data
-            clearCampaignCaches();
-            setTimeout(() => getCampaignsData(true), 500);
+        if (!response.ok) {
+            throw new Error(`Failed to update campaign status: ${response.status} ${response.statusText}`);
         }
-    };
+
+        const data = await response.json();
+        console.log("Campaign status updated successfully", data);
+
+        // Mark that data was mutated
+        dataMutated.current = true;
+        
+        // Clear all campaign-related caches
+        clearCampaignCaches();
+
+        // Show success message
+        handleSnackbarOpen(data.message || "Campaign status updated successfully!", "success");
+        
+        // Fetch fresh data immediately to show updated status
+        await getCampaignsData(true);
+        
+        // Remove loading state for this specific campaign
+        setUpdatingCampaigns(prev => ({ ...prev, [campaignId]: false }));
+        
+    } catch (error) {
+        console.error("Error updating campaign status:", error);
+        handleSnackbarOpen("Error updating campaign status", "error");
+        setUpdatingCampaigns(prev => ({ ...prev, [campaignId]: false }));
+        
+        // On error, revert the UI by fetching fresh data
+        clearCampaignCaches();
+        setTimeout(() => getCampaignsData(true), 500);
+    }
+};
 
     const handleSnackbarOpen = (message, severity) => {
         setSnackbar({ open: true, message, severity });
@@ -541,13 +525,13 @@ const CampaignsComponent = (props, ref) => {
 
     return (
         <React.Fragment>
-            <Dialog open={confirmation.show} onClose={() => setConfirmation({ show: false, campaignId: null, campaignType: null, adType: null })}>
+            <Dialog open={confirmation.show} onClose={() => setConfirmation({ show: false, campaignId: null, campaignType: null, adType: null, currentStatus: null })}>
                 <DialogTitle>Confirm Status Change</DialogTitle>
                 <DialogContent>
-                    Are you sure you want to {confirmation.campaignType === 1 ? 'activate' : 'pause'} this campaign?
+                    Are you sure you want to {confirmation.campaignType === 'ACTIVE' ? 'stop' : 'start'} this campaign?
                 </DialogContent>
                 <DialogActions>
-                    <Button onClick={() => setConfirmation({ show: false, campaignId: null, campaignType: null, adType: null })}>
+                    <Button onClick={() => setConfirmation({ show: false, campaignId: null, campaignType: null, adType: null, currentStatus: null })}>
                         Cancel
                     </Button>
                     <Button 

@@ -28,7 +28,6 @@ const KeywordsComponent = () => {
     const selectedBrand = searchParams.get("brand") || "Cinthol Grocery";
     const navigate = useNavigate()
 
-    // Add ref to handle abort controller for API calls
     const abortControllerRef = useRef(null);
 
     // Brand account combinations
@@ -56,7 +55,6 @@ const KeywordsComponent = () => {
         {"baccount": "K4ZBBTIP0R", "aaccount": "GGRG6OJKHMNQ", "brand": "Kamasutra Nationals"}
     ];
 
-    // Get unique brands for dropdown
     const uniqueBrands = useMemo(() => {
         const brands = [...new Set(accountCombinations.map(combo => combo.brand))];
         return brands.sort();
@@ -138,7 +136,6 @@ const KeywordsComponent = () => {
         getKeywordsData(true);
     };
 
-    // Single useEffect that mirrors OverviewComponent behavior
     useEffect(() => {
         if (abortControllerRef.current) {
             abortControllerRef.current.abort();
@@ -156,7 +153,7 @@ const KeywordsComponent = () => {
             }
             clearTimeout(timeout);
         }
-    }, [operator, dateRange, selectedBrand]); // Include selectedBrand to force refresh on brand change
+    }, [operator, dateRange, selectedBrand]);
 
     useEffect(() => {
         getBrandsData()
@@ -173,143 +170,191 @@ const KeywordsComponent = () => {
         setConfirmation({ show: true, campaignType, keywordId, targetId, adGroupId, campaignId });
     };
 
- const KeywordsColumnBlinkit = [
-    {
-        field: "keyword", // Changed from "keyword_name"
-        headerName: "TARGET",
-        minWidth: 150,
-        renderCell: (params) => (
-            <div className="text-icon-div cursor-pointer" onClick={() => handleKeywordClick(params.row.keyword, params.row.campaign_id)}>
-                <Typography className="redirect" variant="body2">{params.row.keyword}</Typography>
-            </div>
-        ),
-    },
-    { 
-        field: "keyword_type", // Changed from "match_type"
-        headerName: "MATCH TYPE", 
-        minWidth: 150, 
-        headerAlign: "left", 
-    },
-    {
-            field: "cpc",
+    // Helper to display keyword or fallback
+    const getKeywordDisplay = (keyword) => {
+        if (!keyword || keyword === 0 || keyword === "0") {
+            return "N/A";
+        }
+        return keyword;
+    };
+
+    const KeywordsColumnBlinkit = [
+        {
+            field: "keyword",
+            headerName: "TARGET",
+            minWidth: 150,
+            renderCell: (params) => {
+                const keywordDisplay = getKeywordDisplay(params.row.keyword);
+                const isClickable = keywordDisplay !== "N/A";
+                
+                return (
+                    <div 
+                        className={isClickable ? "text-icon-div cursor-pointer" : "text-icon-div"}
+                        onClick={isClickable ? () => handleKeywordClick(params.row.keyword, params.row.campaign_id) : undefined}
+                    >
+                        <Typography 
+                            className={isClickable ? "redirect" : ""} 
+                            variant="body2"
+                            sx={{ color: isClickable ? 'inherit' : 'text.secondary' }}
+                        >
+                            {keywordDisplay}
+                        </Typography>
+                    </div>
+                );
+            },
+        },
+        { 
+            field: "keyword_type",
+            headerName: "MATCH TYPE", 
+            minWidth: 150, 
+            headerAlign: "left",
+            renderCell: (params) => {
+                const matchType = params.row.keyword_type;
+                return matchType && matchType !== "" ? matchType : "N/A";
+            }
+        },
+        {
+            field: "avg_cpm",
             headerName: "BID",
             minWidth: 150,
-            renderCell: (params) => (
-                <BidCell
-                    value={params.row.avg_cpm}
-                    campaignId={params.row.campaign_id}
-                    platform={operator}
-                    keyword={params.row.keyword}
-                    matchType={params.row.keyword_type}
-                    onUpdate={(campaignId, keyword, newBid, matchType) => {
-                        console.log("Updating bid:", { campaignId, keyword, newBid, matchType });
-                        setKeywordsData(prevData => {
-                            const updatedData = {
-                                ...prevData,
-                                data: prevData.data.map(row =>
-                                    row.campaign_id === campaignId &&
-                                        row.keyword === keyword &&
-                                        row.keyword_type === matchType
-                                        ? { ...row, avg_cpm: newBid }
-                                        : row
-                                )
-                            };
-                            console.log("Updated keywordsData:", updatedData);
-                            return updatedData;
-                        });
-                    }} onSnackbarOpen={handleSnackbarOpen}
-                />
-            ), type: "number", align: "left",
+            renderCell: (params) => {
+                const keyword = params.row.keyword;
+                const keywordType = params.row.keyword_type;
+                
+                // Don't show BidCell for SPR campaigns (keyword === 0)
+                if (!keyword || keyword === 0 || keyword === "0") {
+                    return (
+                        <Box sx={{ display: "flex", alignItems: "center", height: "100%" }}>
+                            <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                                {params.row.avg_cpm ? params.row.avg_cpm.toFixed(2) : "N/A"}
+                            </Typography>
+                        </Box>
+                    );
+                }
+
+                return (
+                    <BidCell
+                        value={params.row.avg_cpm}
+                        campaignId={params.row.campaign_id}
+                        campaignType={params.row.campaign_type}
+                        keyword={keyword}
+                        keywordType={keywordType}
+                        platform={operator}
+                        onUpdate={(campaignId, updatedKeyword, newBid, updatedKeywordType) => {
+                            console.log('Updating keyword bid:', {
+                                campaignId,
+                                keyword: updatedKeyword,
+                                keywordType: updatedKeywordType,
+                                newBid,
+                            });
+
+                            setKeywordsData(prevData => {
+                                const updatedData = {
+                                    ...prevData,
+                                    data: prevData.data.map(row =>
+                                        row.campaign_id === campaignId &&
+                                        row.keyword === updatedKeyword &&
+                                        row.keyword_type === updatedKeywordType
+                                            ? { ...row, avg_cpm: newBid }
+                                            : row
+                                    ),
+                                };
+
+                                console.log('Updated keywordsData:', updatedData);
+                                return updatedData;
+                            });
+                        }}
+                        onSnackbarOpen={handleSnackbarOpen}
+                    />
+                );
+            }, 
+            type: "number", 
+            align: "left",
             headerAlign: "left",
         },
-    {
-        field: "impressions",
-        headerName: "IMPRESSIONS",
-        minWidth: 150,
-        renderCell: (params) => (
-            <ColumnPercentageDataComponent mainValue={params.row.impressions} percentValue={params.row.impressions_change} />
-        ), 
-        type: "number", 
-        align: "left",
-        headerAlign: "left",
-    },
-    {
-        field: "clicks",
-        headerName: "CLICKS",
-        minWidth: 150,
-        renderCell: (params) => (
-            <ColumnPercentageDataComponent mainValue={params.row.clicks} percentValue={params.row.clicks_change} />
-        ), 
-        type: "number", 
-        align: "left",
-        headerAlign: "left",
-    },
-    {
-        field: "spend",
-        headerName: "SPENDS",
-        minWidth: 170,
-        renderCell: (params) => (
-            <ColumnPercentageDataComponent mainValue={params.row.spend} percentValue={params.row.spend_change} />
-        ), 
-        type: "number", 
-        align: "left",
-        headerAlign: "left",
-    },
-    {
-        field: "orders",
-        headerName: "ORDERS",
-        minWidth: 170,
-        renderCell: (params) => (
-            <ColumnPercentageDataComponent mainValue={params.row.orders} percentValue={params.row.orders_change} />
-        ), 
-        type: "number", 
-        align: "left",
-        headerAlign: "left",
-    },
-    {
-        field: "sales", // Changed from "revenue"
-        headerName: "SALES",
-        minWidth: 150,
-        renderCell: (params) => (
-            <ColumnPercentageDataComponent mainValue={params.row.sales} percentValue={params.row.sales_change} /> // Changed revenue_change to sales_change
-        ), 
-        type: "number", 
-        align: "left",
-        headerAlign: "left",
-    },
-   
-  
-    {
-        field: "roas",
-        headerName: "ROAS",
-        minWidth: 150,
-        renderCell: (params) => (
-            <ColumnPercentageDataComponent mainValue={params.row.roas} percentValue={params.row.roas_change} />
-        ), 
-        type: "number", 
-        align: "left",
-        headerAlign: "left",
-    },
-    
-
-    {
-        field: "total_atc",
-        headerName: "ATC",
-        minWidth: 150,
-        renderCell: (params) => (
-            <ColumnPercentageDataComponent mainValue={params.row.total_atc} percentValue={params.row.total_atc_change} />
-        ), 
-        type: "number", 
-        align: "left",
-        headerAlign: "left",
-    },
-   
-    {
-        field: "campaign_name",
-        headerName: "CAMPAIGN",
-        minWidth: 300,
-    },
-];
+        {
+            field: "impressions",
+            headerName: "IMPRESSIONS",
+            minWidth: 150,
+            renderCell: (params) => (
+                <ColumnPercentageDataComponent mainValue={params.row.impressions} percentValue={params.row.impressions_change} />
+            ), 
+            type: "number", 
+            align: "left",
+            headerAlign: "left",
+        },
+        {
+            field: "clicks",
+            headerName: "CLICKS",
+            minWidth: 150,
+            renderCell: (params) => (
+                <ColumnPercentageDataComponent mainValue={params.row.clicks} percentValue={params.row.clicks_change} />
+            ), 
+            type: "number", 
+            align: "left",
+            headerAlign: "left",
+        },
+        {
+            field: "spend",
+            headerName: "SPENDS",
+            minWidth: 170,
+            renderCell: (params) => (
+                <ColumnPercentageDataComponent mainValue={params.row.spend} percentValue={params.row.spend_change} />
+            ), 
+            type: "number", 
+            align: "left",
+            headerAlign: "left",
+        },
+        {
+            field: "orders",
+            headerName: "ORDERS",
+            minWidth: 170,
+            renderCell: (params) => (
+                <ColumnPercentageDataComponent mainValue={params.row.orders} percentValue={params.row.orders_change} />
+            ), 
+            type: "number", 
+            align: "left",
+            headerAlign: "left",
+        },
+        {
+            field: "sales",
+            headerName: "SALES",
+            minWidth: 150,
+            renderCell: (params) => (
+                <ColumnPercentageDataComponent mainValue={params.row.sales} percentValue={params.row.sales_change} />
+            ), 
+            type: "number", 
+            align: "left",
+            headerAlign: "left",
+        },
+        {
+            field: "roas",
+            headerName: "ROAS",
+            minWidth: 150,
+            renderCell: (params) => (
+                <ColumnPercentageDataComponent mainValue={params.row.roas} percentValue={params.row.roas_change} />
+            ), 
+            type: "number", 
+            align: "left",
+            headerAlign: "left",
+        },
+        {
+            field: "total_atc",
+            headerName: "ATC",
+            minWidth: 150,
+            renderCell: (params) => (
+                <ColumnPercentageDataComponent mainValue={params.row.total_atc} percentValue={params.row.total_atc_change} />
+            ), 
+            type: "number", 
+            align: "left",
+            headerAlign: "left",
+        },
+        {
+            field: "campaign_name",
+            headerName: "CAMPAIGN",
+            minWidth: 300,
+        },
+    ];
 
     const columns = useMemo(() => {
         if (operator === "Blinkit") return KeywordsColumnBlinkit;
@@ -317,6 +362,11 @@ const KeywordsComponent = () => {
     }, [operator, brands, updatingKeywords]);
 
     const handleKeywordClick = async (keywordName, campaignId) => {
+        // Don't allow clicking for SPR campaigns
+        if (!keywordName || keywordName === 0 || keywordName === "0") {
+            return;
+        }
+
         try {
             const token = localStorage.getItem("accessToken");
             const startDate = formatDate(dateRange[0].startDate);

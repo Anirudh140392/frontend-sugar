@@ -5,15 +5,13 @@ import { Check } from "@mui/icons-material";
 const BidCell = ({ 
   value, 
   campaignId, 
-  onUpdate, 
-  platform, 
+  campaignType,
   keyword, 
   keywordType, 
+  platform, 
+  brand_name,
+  onUpdate, 
   onSnackbarOpen,
-  targetId,
-  campaignType,
-  adGroupId,
-  keywordId
 }) => {
   const [bid, setBid] = useState(value);
   const [isUpdating, setIsUpdating] = useState(false);
@@ -35,11 +33,12 @@ const BidCell = ({
       setIsUpdating(true);
 
       const payload = {
-        platform: platform,
+        platform,
         campaign_id: String(campaignId),
         bid: Number(bid),
-        keyword: keyword,
+        keyword,
         match_type: keywordType,
+        brand_name,
       };
 
       const response = await fetch(
@@ -57,14 +56,10 @@ const BidCell = ({
       if (!response.ok) throw new Error("Failed to update bid");
 
       const updatedData = await response.json();
-      
-      // Handle different platforms with different onUpdate signatures
-      if (platform === "Amazon") {
-        onUpdate(campaignId, targetId, campaignType, adGroupId, keywordId, updatedData.bid || bid);
-      } else {
-        // For Blinkit, Zepto, Swiggy
-        onUpdate(campaignId, keyword, updatedData.bid || bid, keywordType);
-      }
+      const newBid = updatedData.bid ?? bid;
+
+      // ✅ Always call with consistent signature
+      onUpdate(campaignId, keyword, newBid, keywordType);
 
       onSnackbarOpen(updatedData.message || "Bid updated successfully!", "success");
     } catch (error) {
@@ -77,14 +72,14 @@ const BidCell = ({
   };
 
   return (
-    <Box sx={{ display: "flex", justifyContent: "flex-start", alignItems: "center", gap: 1, width: "100%", height: "100%" }}>
+    <Box sx={{ display: "flex", alignItems: "center", gap: 1, width: "100%", height: "100%" }}>
       <TextField
         type="number"
         variant="outlined"
         size="small"
         value={bid}
         onChange={handleBidChange}
-        sx={{ width: "120px" }}
+        sx={{ width: 120 }}
         disabled={isUpdating}
       />
       <IconButton color="primary" onClick={handleUpdate} disabled={isUpdating}>

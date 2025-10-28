@@ -8,6 +8,7 @@ const BudgetCell = ({
   platform,
   onUpdate,
   onSnackbarOpen,
+  brand_name
 }) => {
   const [budget, setBudget] = useState(value);
   const [isUpdating, setIsUpdating] = useState(false);
@@ -28,6 +29,7 @@ const BudgetCell = ({
         platform: platform,
         campaign_id: Number(campaignId),
         budget: Number(budget),
+        brand_name: brand_name
       };
 
       const response = await fetch(

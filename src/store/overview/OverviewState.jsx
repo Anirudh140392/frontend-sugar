@@ -11,7 +11,7 @@ const OverviewState = (props) => {
     const [searchParams] = useSearchParams();
     const operator = searchParams.get("operator");
     // Get selectedBrand from URL params
-    const selectedBrand = searchParams.get("brand") || "Cinthol Grocery";
+    const selectedBrand = searchParams.get("brand") || "SUGAR Cosmetics";
 
     const [dateRange, setDateRange] = useState([
         {

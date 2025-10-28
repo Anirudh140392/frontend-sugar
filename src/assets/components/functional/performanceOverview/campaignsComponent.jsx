@@ -23,25 +23,28 @@ const CampaignsComponent = (props, ref) => {
     const [showTrendsModal, setShowTrendsModal] = useState({ name: '', show: false, date: [] })
     const [campaignsData, setCampaignsData] = useState({})
     const [isLoading, setIsLoading] = useState(false)
-    const [confirmation, setConfirmation] = useState({ 
-        show: false, 
-        campaignId: null, 
+    const [confirmation, setConfirmation] = useState({
+        show: false,
+        campaignId: null,
         campaignType: null,
         adType: null,
-        currentStatus: null
+        currentStatus: null,
+        newStatus: null,
+        platform: null,
+        brandName: null
     });
     const [snackbar, setSnackbar] = useState({ open: false, message: "", severity: "success" });
 
     const [searchParams, setSearchParams] = useSearchParams();
     const operator = searchParams.get("operator");
-    const selectedBrand = searchParams.get("brand") || "Cinthol Grocery";
+    const selectedBrand = searchParams.get("brand") || "SUGAR Cosmetics";
 
     // Add ref to handle abort controller for API calls
     const abortControllerRef = useRef(null);
-    
+
     // Track if data was mutated (budget/status changed) to force refresh on next component mount
     const dataMutated = useRef(false);
-    
+
     // Track if component is currently visible/mounted
     const isComponentActive = useRef(true);
 
@@ -101,13 +104,13 @@ const CampaignsComponent = (props, ref) => {
             field: "budget",
             headerName: "BUDGET",
             minWidth: 200,
-            renderCell: (params) => <BudgetCell 
-                status={params.row.campaign_status} 
-                value={params.row.budget} 
-                campaignId={params.row.campaign_id} 
+            renderCell: (params) => <BudgetCell
+                status={params.row.campaign_status}
+                value={params.row.budget}
+                campaignId={params.row.campaign_id}
                 adType={params.row.ad_type}
-                brand={params.row.brand} 
-                endDate={params.row.end_date || null} 
+                brand={params.row.brand}
+                endDate={params.row.end_date || null}
                 platform={operator}
                 onUpdate={(campaignId, newBudget) => {
                     console.log("Updating campaign:", campaignId, "New budget:", newBudget);
@@ -128,11 +131,11 @@ const CampaignsComponent = (props, ref) => {
                         console.log("Updated campaignsData:", updatedData);
                         return updatedData;
                     });
-                }} 
-                onSnackbarOpen={handleSnackbarOpen} 
+                }}
+                onSnackbarOpen={handleSnackbarOpen}
             />,
             headerAlign: "left",
-            type: "number", 
+            type: "number",
             align: "left",
         },
         {
@@ -162,7 +165,7 @@ const CampaignsComponent = (props, ref) => {
                         onChange={() => handleToggle(
                             params.row.campaign_id,
                             status,
-                            
+
                         )}
                     />
                 );
@@ -239,6 +242,161 @@ const CampaignsComponent = (props, ref) => {
             headerAlign: "left",
         }
     ];
+    const CampaignsColumnZepto = [
+        {
+            field: "campaign_name",
+            headerName: "CAMPAIGN",
+            minWidth: 200,
+            renderCell: (params) => (
+                <Box sx={{ display: "flex", flexDirection: "column", gap: 0.5 }}>
+                    <Box sx={{ cursor: "pointer" }}>
+                        {params.row.campaign_name}
+                    </Box>
+                </Box>
+            ),
+        },
+        {
+            field: "daily_budget",
+            headerName: "BUDGET",
+            minWidth: 200,
+            renderCell: (params) => (
+                <BudgetCell
+                    value={params.row.daily_budget}
+                    campaignId={params.row.campaign_id}
+                    platform={operator}
+                    brand_name={params.row.brand_name}
+                    endDate={params.row.end_date || null}
+                    onUpdate={(campaignId, newBudget) => {
+                        console.log("Updating Zepto campaign budget:", campaignId, "New budget:", newBudget);
+                        setCampaignsData(prevData => {
+                            const updatedData = {
+                                ...prevData,
+                                data: prevData.data.map(campaign =>
+                                    campaign.campaign_id === campaignId
+                                        ? { ...campaign, daily_budget: newBudget }
+                                        : campaign
+                                )
+                            };
+                            console.log("Updated Zepto campaignsData:", updatedData);
+                            return updatedData;
+                        });
+                    }}
+                    onSnackbarOpen={handleSnackbarOpen}
+                />
+            ),
+            type: "number",
+            align: "left",
+            headerAlign: "left",
+        },
+        {
+            field: "status",
+            headerName: "STATUS",
+            minWidth: 120,
+            align: "center",
+            headerAlign: "center",
+            renderCell: (params) => {
+                const status = params.row.status;
+                const campaignId = params.row.campaign_id;
+                const brandName = params.row.brand_name;
+
+                // Show loading spinner if this campaign is being updated
+                if (updatingCampaigns[campaignId]) {
+                    return (
+                        <Box sx={{ height: "100%", display: "flex", justifyContent: "center", alignItems: "center" }}>
+                            <CircularProgress size={24} />
+                        </Box>
+                    );
+                }
+
+                // Disable toggle for ENDED and DAILY_BUDGET_EXHAUSTED
+                const isDisabled = status === "ENDED" || status === "DAILY_BUDGET_EXHAUSTED";
+                // Toggle ON for ACTIVE, OFF for PAUSED
+                const isActive = status === "ACTIVE";
+
+                return (
+                    <Switch
+                        checked={isActive}
+                        disabled={isDisabled}
+                        onChange={() => {
+                            // Show confirmation dialog before changing status
+                            setConfirmation({
+                                show: true,
+                                campaignId,
+                                newStatus: isActive ? "PAUSED" : "ACTIVE",
+                                platform: "Zepto",
+                                brandName
+                            });
+                        }}
+                    />
+                );
+            },
+            type: "singleSelect",
+        },
+        {
+            field: "impressions",
+            headerName: "IMPRESSIONS",
+            minWidth: 150,
+            renderCell: (params) => (
+                <ColumnPercentageDataComponent mainValue={params.row.impressions} percentValue={params.row.impressions_change} />
+            ), type: "number", align: "left",
+            headerAlign: "left",
+        },
+        {
+            field: "clicks",
+            headerName: "CLICKS",
+            minWidth: 150,
+            renderCell: (params) => (
+                <ColumnPercentageDataComponent mainValue={params.row.clicks} percentValue={params.row.clicks_change} />
+            ), type: "number", align: "left",
+            headerAlign: "left",
+        },
+        {
+            field: "spend",
+            headerName: "SPENDS",
+            minWidth: 170,
+            renderCell: (params) => (
+                <ColumnPercentageDataComponent mainValue={params.row.spend} percentValue={params.row.spend_change} />
+            ), type: "number", align: "left",
+            headerAlign: "left",
+        },
+        {
+            field: "orders",
+            headerName: "ORDERS",
+            minWidth: 150,
+            renderCell: (params) => (
+                <ColumnPercentageDataComponent mainValue={params.row.orders} percentValue={params.row.orders_change} />
+            ), type: "number", align: "left",
+            headerAlign: "left",
+        },
+        {
+            field: "sales",
+            headerName: "SALES",
+            minWidth: 150,
+            renderCell: (params) => (
+                <ColumnPercentageDataComponent mainValue={params.row.sales} percentValue={params.row.sales_change} />
+            ), type: "number", align: "left",
+            headerAlign: "left",
+        },
+        {
+            field: "cpm",
+            headerName: "CPM",
+            minWidth: 150,
+            renderCell: (params) => (
+                <ColumnPercentageDataComponent mainValue={params.row.cpm} percentValue={params.row.cpm_change} />
+            ), type: "number", align: "left",
+            headerAlign: "left",
+        },
+        {
+            field: "roas",
+            headerName: "ROAS",
+            minWidth: 150,
+            renderCell: (params) => (
+                <ColumnPercentageDataComponent mainValue={params.row.roas} percentValue={params.row.roas_change} />
+            ), type: "number", align: "left",
+            headerAlign: "left",
+        },
+    ];
+
 
     const normalizedBrands = useMemo(() => {
         const source = brands;
@@ -293,7 +451,7 @@ const CampaignsComponent = (props, ref) => {
             const cacheKey = `cache:GET:${url}`;
 
             if (forceRefresh) {
-                try { localStorage.removeItem(cacheKey); } catch (_) {}
+                try { localStorage.removeItem(cacheKey); } catch (_) { }
             } else {
                 const cached = getCache(cacheKey);
                 if (cached) {
@@ -320,7 +478,7 @@ const CampaignsComponent = (props, ref) => {
             console.log("Campaigns data fetched:", data);
             setCampaignsData(data);
             if (forceRefresh) {
-                try { setCache(cacheKey, data, 5 * 60 * 1000); } catch (_) {}
+                try { setCache(cacheKey, data, 5 * 60 * 1000); } catch (_) { }
             }
         } catch (error) {
             if (error.name === "AbortError") {
@@ -382,7 +540,7 @@ const CampaignsComponent = (props, ref) => {
     useEffect(() => {
         // Component is mounting/becoming visible
         isComponentActive.current = true;
-        
+
         return () => {
             // Component is unmounting/becoming hidden
             isComponentActive.current = false;
@@ -390,11 +548,12 @@ const CampaignsComponent = (props, ref) => {
     }, []);
 
     useEffect(() => {
-        try { getBrandsData(); } catch (_) {}
+        try { getBrandsData(); } catch (_) { }
     }, [operator]);
 
     const columns = useMemo(() => {
         if (operator === "Blinkit") return CampaignsColumnBlinkit;
+        if (operator === "Zepto") return CampaignsColumnZepto;
         return [];
     }, [operator, brands, updatingCampaigns]);
 
@@ -437,16 +596,16 @@ const CampaignsComponent = (props, ref) => {
         // Determine new status based on current status
         const statusStr = String(currentStatus).toUpperCase().trim();
         let newStatus;
-        
+
         if (statusStr === 'ACTIVE' || statusStr === 'ON_HOLD') {
             newStatus = 'STOPPED';
         } else {
             newStatus = 'ACTIVE';
         }
-        
-        setConfirmation({ 
-            show: true, 
-            campaignId, 
+
+        setConfirmation({
+            show: true,
+            campaignId,
             campaignType: statusStr,
             adType: null,
             currentStatus
@@ -459,61 +618,61 @@ const CampaignsComponent = (props, ref) => {
         confirmStatusChange(campaignId, newStatus, adType);
     };
 
-   const confirmStatusChange = async (campaignId, newStatus, adType) => {
-    try {
-        const token = localStorage.getItem("accessToken");
-        
-        const requestBody = {
-            platform: operator,
-            campaign_id: campaignId,
-            status: newStatus
-        };
+    const confirmStatusChange = async (campaignId, newStatus, adType) => {
+        try {
+            const token = localStorage.getItem("accessToken");
 
-        const playPauseUrl = `https://react-api-script.onrender.com/sugar/play-pause`;
+            const requestBody = {
+                platform: operator,
+                campaign_id: campaignId,
+                status: newStatus
+            };
 
-        console.log("Sending play-pause request:", requestBody);
+            const playPauseUrl = `https://react-api-script.onrender.com/sugar/play-pause`;
 
-        const response = await fetch(playPauseUrl, {
-            method: "PUT",
-            headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${token}`,
-            },
-            body: JSON.stringify(requestBody)
-        });
+            console.log("Sending play-pause request:", requestBody);
 
-        if (!response.ok) {
-            throw new Error(`Failed to update campaign status: ${response.status} ${response.statusText}`);
+            const response = await fetch(playPauseUrl, {
+                method: "PUT",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${token}`,
+                },
+                body: JSON.stringify(requestBody)
+            });
+
+            if (!response.ok) {
+                throw new Error(`Failed to update campaign status: ${response.status} ${response.statusText}`);
+            }
+
+            const data = await response.json();
+            console.log("Campaign status updated successfully", data);
+
+            // Mark that data was mutated
+            dataMutated.current = true;
+
+            // Clear all campaign-related caches
+            clearCampaignCaches();
+
+            // Show success message
+            handleSnackbarOpen(data.message || "Campaign status updated successfully!", "success");
+
+            // Fetch fresh data immediately to show updated status
+            await getCampaignsData(true);
+
+            // Remove loading state for this specific campaign
+            setUpdatingCampaigns(prev => ({ ...prev, [campaignId]: false }));
+
+        } catch (error) {
+            console.error("Error updating campaign status:", error);
+            handleSnackbarOpen("Error updating campaign status", "error");
+            setUpdatingCampaigns(prev => ({ ...prev, [campaignId]: false }));
+
+            // On error, revert the UI by fetching fresh data
+            clearCampaignCaches();
+            setTimeout(() => getCampaignsData(true), 500);
         }
-
-        const data = await response.json();
-        console.log("Campaign status updated successfully", data);
-
-        // Mark that data was mutated
-        dataMutated.current = true;
-        
-        // Clear all campaign-related caches
-        clearCampaignCaches();
-
-        // Show success message
-        handleSnackbarOpen(data.message || "Campaign status updated successfully!", "success");
-        
-        // Fetch fresh data immediately to show updated status
-        await getCampaignsData(true);
-        
-        // Remove loading state for this specific campaign
-        setUpdatingCampaigns(prev => ({ ...prev, [campaignId]: false }));
-        
-    } catch (error) {
-        console.error("Error updating campaign status:", error);
-        handleSnackbarOpen("Error updating campaign status", "error");
-        setUpdatingCampaigns(prev => ({ ...prev, [campaignId]: false }));
-        
-        // On error, revert the UI by fetching fresh data
-        clearCampaignCaches();
-        setTimeout(() => getCampaignsData(true), 500);
-    }
-};
+    };
 
     const handleSnackbarOpen = (message, severity) => {
         setSnackbar({ open: true, message, severity });
@@ -525,23 +684,83 @@ const CampaignsComponent = (props, ref) => {
 
     return (
         <React.Fragment>
-            <Dialog open={confirmation.show} onClose={() => setConfirmation({ show: false, campaignId: null, campaignType: null, adType: null, currentStatus: null })}>
-                <DialogTitle>Confirm Status Change</DialogTitle>
-                <DialogContent>
-                    Are you sure you want to {confirmation.campaignType === 'ACTIVE' ? 'stop' : 'start'} this campaign?
-                </DialogContent>
-                <DialogActions>
-                    <Button onClick={() => setConfirmation({ show: false, campaignId: null, campaignType: null, adType: null, currentStatus: null })}>
-                        Cancel
-                    </Button>
-                    <Button 
-                        onClick={() => updateCampaignStatus(confirmation.campaignId, confirmation.campaignType, confirmation.adType)} 
-                        color="primary"
-                    >
-                        Confirm
-                    </Button>
-                </DialogActions>
-            </Dialog>
+            {/* Dialog for Zepto status changes */}
+            {confirmation.show && confirmation.platform === "Zepto" && (
+                <Dialog open={true} onClose={() => setConfirmation({ show: false })}>
+                    <DialogTitle>Confirm Status Change</DialogTitle>
+                    <DialogContent>
+                        Are you sure you want to change status to {confirmation.newStatus}?
+                    </DialogContent>
+                    <DialogActions>
+                        <Button onClick={() => setConfirmation({ show: false })}>Cancel</Button>
+                        <Button color="primary" onClick={async () => {
+                            const { campaignId, newStatus, brandName } = confirmation;
+                            setUpdatingCampaigns(prev => ({ ...prev, [campaignId]: true }));
+                            try {
+                                const token = localStorage.getItem("accessToken");
+                                // Build payload as required
+                                const payload =
+                                {
+                                    "campaign_id": campaignId,
+                                    "status": newStatus,
+                                    "platform": "zepto",
+                                    "brand_name": brandName
+
+                                };
+
+                                console.log("Sending Zepto play-pause request:", payload);
+
+                                const response = await fetch("https://react-api-script.onrender.com/sugar/play-pause", {
+                                    method: "PUT",
+                                    headers: {
+                                        "Content-Type": "application/json",
+                                        Authorization: `Bearer ${token}`,
+                                    },
+                                    body: JSON.stringify(payload)
+                                });
+
+                                if (response.ok) {
+                                    const data = await response.json();
+                                    handleSnackbarOpen(data.message || "Status updated successfully!", "success");
+                                    dataMutated.current = true;
+                                    clearCampaignCaches();
+                                    await getCampaignsData(true);
+                                } else {
+                                    handleSnackbarOpen("Failed to update status!", "error");
+                                }
+                            } catch (error) {
+                                console.error("Error updating Zepto status:", error);
+                                handleSnackbarOpen("Error updating status!", "error");
+                            } finally {
+                                setUpdatingCampaigns(prev => ({ ...prev, [campaignId]: false }));
+                                setConfirmation({ show: false });
+                            }
+                        }}>Confirm</Button>
+                    </DialogActions>
+                </Dialog>
+            )}
+
+            {/* Dialog for Blinkit status changes */}
+            {confirmation.show && confirmation.platform !== "Zepto" && (
+                <Dialog open={true} onClose={() => setConfirmation({ show: false, campaignId: null, campaignType: null, adType: null, currentStatus: null })}>
+                    <DialogTitle>Confirm Status Change</DialogTitle>
+                    <DialogContent>
+                        Are you sure you want to {confirmation.campaignType === 'ACTIVE' ? 'stop' : 'start'} this campaign?
+                    </DialogContent>
+                    <DialogActions>
+                        <Button onClick={() => setConfirmation({ show: false, campaignId: null, campaignType: null, adType: null, currentStatus: null })}>
+                            Cancel
+                        </Button>
+                        <Button
+                            onClick={() => updateCampaignStatus(confirmation.campaignId, confirmation.campaignType, confirmation.adType)}
+                            color="primary"
+                        >
+                            Confirm
+                        </Button>
+                    </DialogActions>
+                </Dialog>
+            )}
+
             <TrendsModal
                 showTrendsModal={showTrendsModal}
                 setShowTrendsModal={setShowTrendsModal} />

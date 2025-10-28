@@ -18,7 +18,7 @@ const ProductsComponent = () => {
 
     const [searchParams] = useSearchParams();
     const operator = searchParams.get("operator");
-    const selectedBrand = searchParams.get("brand") || "Cinthol Grocery";
+    const selectedBrand = searchParams.get("brand") || "SUGAR Cosmetics";
     const [productsData, setProductsData] = useState({})
     const [isLoading, setIsLoading] = useState(false)
     const [updatingProduct, setUpdatingProduct] = useState({});

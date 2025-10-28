@@ -19,7 +19,7 @@ const OverviewComponent = () => {
     const operator = searchParams.get("operator");
     
     // Get selectedBrand from URL params like KeywordsComponent
-    const selectedBrand = searchParams.get("brand") || "Cinthol Grocery";
+    const selectedBrand = searchParams.get("brand") || "SUGAR Cosmetics";
     
     // Add ref to handle abort controller for API calls
     const abortControllerRef = useRef(null);

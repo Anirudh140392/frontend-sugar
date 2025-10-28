@@ -552,21 +552,21 @@ const OverviewComponent = () => {
                             <div className="col-md-4">
                                 <CTRWidget
                                     firstHeadingText="Impressions"
-                                    firstHeadingData={`${overviewData?.metrics_data?.total_impressions ? toLakhs(overviewData?.metrics_data?.total_impressions) : "-"}`}
+                                    firstHeadingData={`${overviewData?.metrics_data?.Impressions ? toLakhs(overviewData?.metrics_data?.Impressions) : "-"}`}
                                     secondHeadingText="Clicks"
-                                    secondHeadingData={`${overviewData?.metrics_data?.total_clicks ? toThousands(overviewData?.metrics_data?.total_clicks) : "-"}`} />
+                                    secondHeadingData={`${overviewData?.metrics_data?.Clicks ? toThousands(overviewData?.metrics_data?.Clicks) : "-"}`} />
                             </div>
                             <div className="col-md-4">
                                 <CTRWidget
                                     firstHeadingText="Spends"
-                                    firstHeadingData={`${overviewData?.metrics_data?.total_spends ? toLakhs(overviewData?.metrics_data?.total_spends) : "-"}`}
+                                    firstHeadingData={`${overviewData?.metrics_data?.Spend ? toLakhs(overviewData?.metrics_data?.Spend) : "-"}`}
                                     secondHeadingText="Sales"
-                                    secondHeadingData={`${overviewData?.metrics_data?.total_sales ? toLakhs(overviewData?.metrics_data?.total_sales) : "-"}`} />
+                                    secondHeadingData={`${overviewData?.metrics_data?.Sales ? toLakhs(overviewData?.metrics_data?.Sales) : "-"}`} />
                             </div>
                             <div className="col-md-4">
                                 <CTRWidget
                                     firstHeadingText="Orders"
-                                    firstHeadingData={`${overviewData?.metrics_data?.total_orders ? toThousands(overviewData?.metrics_data?.total_orders) : "-"}`}
+                                    firstHeadingData={`${overviewData?.metrics_data?.Orders ? toThousands(overviewData?.metrics_data?.Orders) : "-"}`}
                                     secondHeadingText="ROAS"
                                     secondHeadingData={`${overviewData?.metrics_data?.avg_roas ? overviewData?.metrics_data?.avg_roas : "-"}`} />
                             </div>

@@ -25,7 +25,7 @@ const KeywordsComponent = () => {
 
     const [searchParams, setSearchParams] = useSearchParams();
     const operator = searchParams.get("operator");
-    const selectedBrand = searchParams.get("brand") || "SUGAR Cosmetics";
+    const selectedBrand = searchParams.get("brand") || "";
     const navigate = useNavigate()
 
     const abortControllerRef = useRef(null);
@@ -67,7 +67,7 @@ const KeywordsComponent = () => {
         const ts = forceRefresh ? `&_=${Date.now()}` : "";
 
         let url = `https://react-api-script.onrender.com/sugar/keywords?start_date=${startDate}&end_date=${endDate}&platform=${operator}${ts}`;
-        if (selectedBrand && typeof selectedBrand === "string") {
+       if (selectedBrand && selectedBrand.trim() !== "")  {
             url += `&brand_name=${encodeURIComponent(selectedBrand)}`;
         }
         const cacheKey = `cache:GET:${url}`;
@@ -228,7 +228,7 @@ const KeywordsComponent = () => {
                             const endDate = formatDate(dateRange[0].endDate);
                             const ts = `&_=${Date.now()}`;
                             let url = `https://react-api-script.onrender.com/sugar/keywords?start_date=${startDate}&end_date=${endDate}&platform=${operator}${ts}`;
-                            if (selectedBrand && typeof selectedBrand === "string") {
+                            if (selectedBrand && selectedBrand.trim() !== "") {
                                 url += `&brand_name=${encodeURIComponent(selectedBrand)}`;
                             }
                             const cacheKey = `cache:GET:${url}`;

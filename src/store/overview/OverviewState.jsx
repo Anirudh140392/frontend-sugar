@@ -1,3 +1,7 @@
+// Header.js - Update this line
+// Change: const [selectedBrand, setSelectedBrand] = useState(brandType || "SUGAR Cosmetics");
+// To: const [selectedBrand, setSelectedBrand] = useState(brandType || "");
+
 import { useState, useCallback, useMemo, useEffect, useRef } from "react";
 import OverviewContext from "./overviewContext";
 import { subDays, format } from "date-fns";
@@ -10,8 +14,8 @@ const OverviewState = (props) => {
 
     const [searchParams] = useSearchParams();
     const operator = searchParams.get("operator");
-    // Get selectedBrand from URL params
-    const selectedBrand = searchParams.get("brand") || "SUGAR Cosmetics";
+    // Get selectedBrand from URL params - default to empty string instead of "SUGAR Cosmetics"
+    const selectedBrand = searchParams.get("brand") || "";
 
     const [dateRange, setDateRange] = useState([
         {
@@ -51,7 +55,8 @@ const OverviewState = (props) => {
 
         try {
             let url = `${host}/sugar/${endpoint}?start_date=${startDate}&end_date=${endDate}&platform=${operator}`;
-            if (selectedBrand && typeof selectedBrand === "string") {
+            // Only add brand_name parameter if a specific brand is selected (not empty string)
+            if (selectedBrand && selectedBrand.trim() !== "") {
                 url += `&brand_name=${encodeURIComponent(selectedBrand)}`;
             }
             const cacheKey = `cache:GET:${url}`;
@@ -149,7 +154,8 @@ const OverviewState = (props) => {
         const ts = forceRefresh ? `&_=${Date.now()}` : "";
 
         let url = `${host}/sugar/home?start_date=${startDate}&end_date=${endDate}&platform=${operator}${ts}`;
-        if (selectedBrand && typeof selectedBrand === "string") {
+        // Only add brand_name parameter if a specific brand is selected (not empty string)
+        if (selectedBrand && selectedBrand.trim() !== "") {
             url += `&brand_name=${encodeURIComponent(selectedBrand)}`;
         }
         const cacheKey = `cache:GET:${url}`;

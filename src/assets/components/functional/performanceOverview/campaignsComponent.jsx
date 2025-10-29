@@ -37,7 +37,7 @@ const CampaignsComponent = (props, ref) => {
 
     const [searchParams, setSearchParams] = useSearchParams();
     const operator = searchParams.get("operator");
-    const selectedBrand = searchParams.get("brand") || "SUGAR Cosmetics";
+    const selectedBrand = searchParams.get("brand") || "";
 
     // Add ref to handle abort controller for API calls
     const abortControllerRef = useRef(null);
@@ -445,7 +445,7 @@ const CampaignsComponent = (props, ref) => {
         try {
             const ts = forceRefresh ? `&_=${Date.now()}` : "";
             let url = `https://react-api-script.onrender.com/sugar/campaign?start_date=${startDate}&end_date=${endDate}&platform=${operator}${ts}`;
-            if (selectedBrand && typeof selectedBrand === "string") {
+            if (selectedBrand && selectedBrand.trim() !== "") {
                 url += `&brand_name=${encodeURIComponent(selectedBrand)}`;
             }
             const cacheKey = `cache:GET:${url}`;
@@ -563,7 +563,7 @@ const CampaignsComponent = (props, ref) => {
             const startDate = formatDate(dateRange[0].startDate);
             const endDate = formatDate(dateRange[0].endDate);
             let url = `https://react-api-script.onrender.com/sugar/campaign_graph?start_date=${formatDate(startDate)}&end_date=${formatDate(endDate)}&platform=${operator}&campaign_id=${campaignId}`;
-            if (selectedBrand && typeof selectedBrand === "string") {
+            if (selectedBrand && selectedBrand.trim() !== "") {
                 url += `&brand_name=${encodeURIComponent(selectedBrand)}`;
             }
             const cacheKey = `cache:GET:${url}`;

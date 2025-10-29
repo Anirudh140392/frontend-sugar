@@ -18,7 +18,7 @@ const ProductsComponent = () => {
 
     const [searchParams] = useSearchParams();
     const operator = searchParams.get("operator");
-    const selectedBrand = searchParams.get("brand") || "SUGAR Cosmetics";
+    const selectedBrand = searchParams.get("brand") || "";
     const [productsData, setProductsData] = useState({})
     const [isLoading, setIsLoading] = useState(false)
     const [updatingProduct, setUpdatingProduct] = useState({});
@@ -559,7 +559,7 @@ const ProductsComponent = () => {
         const ts = forceRefresh ? `&_=${Date.now()}` : "";
 
         let url = `https://react-api-script.onrender.com/sugar/products?start_date=${startDate}&end_date=${endDate}&platform=${operator}${ts}`;
-        if (selectedBrand && typeof selectedBrand === "string") {
+       if (selectedBrand && selectedBrand.trim() !== "") {
             url += `&brand_name=${encodeURIComponent(selectedBrand)}`;
         }
         const cacheKey = `cache:GET:${url}`;

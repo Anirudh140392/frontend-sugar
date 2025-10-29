@@ -50,7 +50,7 @@ const Header = () => {
   const [showSelectedOperator, setShowSelectedOperator] = useState(
     operatorType || ""
   );
-  const [selectedBrand, setSelectedBrand] = useState(brandType || "SUGAR Cosmetics");
+  const [selectedBrand, setSelectedBrand] = useState(brandType || "");
 
   const [showHeaderLogo, setShowHeaderLogo] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);

@@ -319,10 +319,12 @@ const CampaignsComponent = (props, ref) => {
                         disabled={isDisabled}
                         onChange={() => {
                             // Show confirmation dialog before changing status
+                            // Include currentStatus so the API receives the current state (not the new one)
                             setConfirmation({
                                 show: true,
                                 campaignId,
                                 newStatus: isActive ? "PAUSED" : "ACTIVE",
+                                currentStatus: status,
                                 platform: "Zepto",
                                 brandName
                             });
@@ -694,18 +696,16 @@ const CampaignsComponent = (props, ref) => {
                     <DialogActions>
                         <Button onClick={() => setConfirmation({ show: false })}>Cancel</Button>
                         <Button color="primary" onClick={async () => {
-                            const { campaignId, newStatus, brandName } = confirmation;
+                            const { campaignId, newStatus, currentStatus, brandName } = confirmation;
                             setUpdatingCampaigns(prev => ({ ...prev, [campaignId]: true }));
                             try {
                                 const token = localStorage.getItem("accessToken");
-                                // Build payload as required
-                                const payload =
-                                {
-                                    "campaign_id": campaignId,
-                                    "status": newStatus,
-                                    "platform": "zepto",
-                                    "brand_name": brandName
-
+                                // Build payload as required - send currentStatus for Zepto instead of the new status
+                                const payload = {
+                                    campaign_id: campaignId,
+                                    status: currentStatus,
+                                    platform: "zepto",
+                                    brand_name: brandName
                                 };
 
                                 console.log("Sending Zepto play-pause request:", payload);

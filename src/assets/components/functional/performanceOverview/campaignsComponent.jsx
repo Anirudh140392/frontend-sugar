@@ -112,25 +112,60 @@ const CampaignsComponent = (props, ref) => {
                 brand={params.row.brand}
                 endDate={params.row.end_date || null}
                 platform={operator}
-                onUpdate={(campaignId, newBudget) => {
+                onUpdate={async (campaignId, newBudget) => {
                     console.log("Updating campaign:", campaignId, "New budget:", newBudget);
-                    // Mark that data was mutated
-                    dataMutated.current = true;
-                    // Clear cache so next fetch gets fresh data
-                    clearCampaignCaches();
-                    // Optimistically update local state
-                    setCampaignsData(prevData => {
-                        const updatedData = {
+                    try {
+                        // Clear all campaign caches first
+                        await new Promise((resolve) => {
+                            const keysToRemove = [];
+                            for (let i = 0; i < localStorage.length; i++) {
+                                const key = localStorage.key(i);
+                                if (key && key.includes('/sugar/campaign')) {
+                                    keysToRemove.push(key);
+                                }
+                            }
+                            keysToRemove.forEach(key => localStorage.removeItem(key));
+                            console.log(`Cleared ${keysToRemove.length} campaign cache entries`);
+                            resolve();
+                        });
+                        
+                        // Optimistically update local state
+                        setCampaignsData(prevData => ({
                             ...prevData,
                             data: prevData.data.map(campaign =>
                                 campaign.campaign_id === campaignId
                                     ? { ...campaign, Budget: newBudget }
                                     : campaign
                             )
-                        };
-                        console.log("Updated campaignsData:", updatedData);
-                        return updatedData;
-                    });
+                        }));
+
+                        // Step 1: Build URL and cache key for refresh
+                        const startDate = formatDate(dateRange[0].startDate);
+                        const endDate = formatDate(dateRange[0].endDate);
+                        const ts = `&_=${Date.now()}`;
+
+                        let url = `https://react-api-script.onrender.com/sugar/campaign?start_date=${startDate}&end_date=${endDate}&platform=${operator}${ts}`;
+                        if (selectedBrand && selectedBrand.trim() !== "") {
+                            url += `&brand_name=${encodeURIComponent(selectedBrand)}`;
+                        }
+
+                        const cacheKey = `cache:GET:${url}`;
+
+                        // Step 2: Clear cache asynchronously
+                        await new Promise((resolve) => {
+                            localStorage.removeItem(cacheKey);
+                            resolve();
+                        });
+
+                        // Fetch fresh data immediately
+                        await handleRefresh();
+                        
+                        // Show success message
+                       
+                    } catch (error) {
+                        console.error("Error during budget update refresh:", error);
+                        handleSnackbarOpen("Failed to refresh after budget update", "error");
+                    }
                 }}
                 onSnackbarOpen={handleSnackbarOpen}
             />,
@@ -266,20 +301,60 @@ const CampaignsComponent = (props, ref) => {
                     platform={operator}
                     brand_name={params.row.brand_name}
                     endDate={params.row.end_date || null}
-                    onUpdate={(campaignId, newBudget) => {
+                    onUpdate={async (campaignId, newBudget) => {
                         console.log("Updating Zepto campaign budget:", campaignId, "New budget:", newBudget);
-                        setCampaignsData(prevData => {
-                            const updatedData = {
+                        try {
+                            // Clear all campaign caches first
+                            await new Promise((resolve) => {
+                                const keysToRemove = [];
+                                for (let i = 0; i < localStorage.length; i++) {
+                                    const key = localStorage.key(i);
+                                    if (key && key.includes('/sugar/campaign')) {
+                                        keysToRemove.push(key);
+                                    }
+                                }
+                                keysToRemove.forEach(key => localStorage.removeItem(key));
+                                console.log(`Cleared ${keysToRemove.length} campaign cache entries`);
+                                resolve();
+                            });
+                            
+                            // Optimistically update local state
+                            setCampaignsData(prevData => ({
                                 ...prevData,
                                 data: prevData.data.map(campaign =>
                                     campaign.campaign_id === campaignId
                                         ? { ...campaign, daily_budget: newBudget }
                                         : campaign
                                 )
-                            };
-                            console.log("Updated Zepto campaignsData:", updatedData);
-                            return updatedData;
-                        });
+                            }));
+
+                            // Step 1: Build URL and cache key for refresh
+                            const startDate = formatDate(dateRange[0].startDate);
+                            const endDate = formatDate(dateRange[0].endDate);
+                            const ts = `&_=${Date.now()}`;
+
+                            let url = `https://react-api-script.onrender.com/sugar/campaign?start_date=${startDate}&end_date=${endDate}&platform=${operator}${ts}`;
+                            if (selectedBrand && selectedBrand.trim() !== "") {
+                                url += `&brand_name=${encodeURIComponent(selectedBrand)}`;
+                            }
+
+                            const cacheKey = `cache:GET:${url}`;
+
+                            // Step 2: Clear cache asynchronously
+                            await new Promise((resolve) => {
+                                localStorage.removeItem(cacheKey);
+                                resolve();
+                            });
+
+                            // Fetch fresh data immediately
+                            await handleRefresh();
+                            
+                            // Show success message
+                            
+                        } catch (error) {
+                            console.error("Error during budget update refresh:", error);
+                            handleSnackbarOpen("Failed to refresh after budget update", "error");
+                        }
                     }}
                     onSnackbarOpen={handleSnackbarOpen}
                 />
@@ -494,10 +569,71 @@ const CampaignsComponent = (props, ref) => {
         }
     };
 
-    const handleRefresh = async () => {
-        console.log("Refresh clicked: forcing network fetch");
-        clearCampaignCaches();
-        getCampaignsData(true);
+    const handleRefresh = async (keepData = true) => {
+        try {
+            // Only set loading if we're not keeping existing data
+            if (!keepData) {
+                setIsLoading(true);
+            }
+
+            // Build URL and cache key
+            const startDate = formatDate(dateRange[0].startDate);
+            const endDate = formatDate(dateRange[0].endDate);
+            const ts = `&_=${Date.now()}`;
+
+            let url = `https://react-api-script.onrender.com/sugar/campaign?start_date=${startDate}&end_date=${endDate}&platform=${operator}${ts}`;
+            if (selectedBrand && selectedBrand.trim() !== "") {
+                url += `&brand_name=${encodeURIComponent(selectedBrand)}`;
+            }
+
+            // Clear old cache asynchronously
+            await new Promise((resolve) => {
+                const keysToRemove = [];
+                for (let i = 0; i < localStorage.length; i++) {
+                    const key = localStorage.key(i);
+                    if (key && key.includes('/sugar/campaign')) {
+                        keysToRemove.push(key);
+                    }
+                }
+                keysToRemove.forEach(key => localStorage.removeItem(key));
+                resolve();
+            });
+
+            // Fetch new data
+            const token = localStorage.getItem("accessToken");
+            if (!token) throw new Error("Missing access token");
+
+            const response = await fetch(url, {
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${token}`,
+                },
+            });
+
+            if (!response.ok) {
+                throw new Error(`Failed to refresh: ${response.statusText}`);
+            }
+
+            const freshData = await response.json();
+
+            // Step 3: Update state with new data
+            setCampaignsData(freshData);
+
+            // Step 4: Optionally re-cache fresh data
+            try {
+                localStorage.setItem(cacheKey, JSON.stringify(freshData));
+            } catch (err) {
+                console.warn("Could not re-cache fresh data:", err);
+            }
+
+        
+          
+        } catch (error) {
+            console.error("Error during refresh:", error);
+            handleSnackbarOpen("Failed to refresh data", "error");
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     useImperativeHandle(ref, () => ({
@@ -622,6 +758,9 @@ const CampaignsComponent = (props, ref) => {
 
     const confirmStatusChange = async (campaignId, newStatus, adType) => {
         try {
+            // Set loading state for this campaign
+            setUpdatingCampaigns(prev => ({ ...prev, [campaignId]: true }));
+
             const token = localStorage.getItem("accessToken");
 
             const requestBody = {
@@ -650,17 +789,50 @@ const CampaignsComponent = (props, ref) => {
             const data = await response.json();
             console.log("Campaign status updated successfully", data);
 
-            // Mark that data was mutated
-            dataMutated.current = true;
+            // Step 1: Build URL and cache key for refresh
+            const startDate = formatDate(dateRange[0].startDate);
+            const endDate = formatDate(dateRange[0].endDate);
+            const ts = `&_=${Date.now()}`;
 
-            // Clear all campaign-related caches
-            clearCampaignCaches();
+            let url = `https://react-api-script.onrender.com/sugar/campaign?start_date=${startDate}&end_date=${endDate}&platform=${operator}${ts}`;
+            if (selectedBrand && selectedBrand.trim() !== "") {
+                url += `&brand_name=${encodeURIComponent(selectedBrand)}`;
+            }
+
+            const cacheKey = `cache:GET:${url}`;
+
+            // Step 2: Clear cache asynchronously
+            await new Promise((resolve) => {
+                const keysToRemove = [];
+                for (let i = 0; i < localStorage.length; i++) {
+                    const key = localStorage.key(i);
+                    if (key && key.includes('/sugar/campaign')) {
+                        keysToRemove.push(key);
+                    }
+                }
+                keysToRemove.forEach(key => localStorage.removeItem(key));
+                resolve();
+            });
+
+            // Step 3: Fetch fresh data
+            const freshResponse = await fetch(url, {
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${token}`,
+                },
+            });
+
+            if (!freshResponse.ok) {
+                throw new Error(`Failed to refresh after status update: ${freshResponse.statusText}`);
+            }
+
+            const freshData = await freshResponse.json();
+
+            // Step 4: Update state with fresh data
+            setCampaignsData(freshData);
 
             // Show success message
             handleSnackbarOpen(data.message || "Campaign status updated successfully!", "success");
-
-            // Fetch fresh data immediately to show updated status
-            await getCampaignsData(true);
 
             // Remove loading state for this specific campaign
             setUpdatingCampaigns(prev => ({ ...prev, [campaignId]: false }));
@@ -722,9 +894,47 @@ const CampaignsComponent = (props, ref) => {
                                 if (response.ok) {
                                     const data = await response.json();
                                     handleSnackbarOpen(data.message || "Status updated successfully!", "success");
-                                    dataMutated.current = true;
-                                    clearCampaignCaches();
-                                    await getCampaignsData(true);
+                                    // Step 1: Build URL and cache key for refresh
+                                    const startDate = formatDate(dateRange[0].startDate);
+                                    const endDate = formatDate(dateRange[0].endDate);
+                                    const ts = `&_=${Date.now()}`;
+
+                                    let url = `https://react-api-script.onrender.com/sugar/campaign?start_date=${startDate}&end_date=${endDate}&platform=${operator}${ts}`;
+                                    if (selectedBrand && selectedBrand.trim() !== "") {
+                                        url += `&brand_name=${encodeURIComponent(selectedBrand)}`;
+                                    }
+
+                                    const cacheKey = `cache:GET:${url}`;
+
+                                    // Step 2: Clear cache asynchronously
+                                    await new Promise((resolve) => {
+                                        localStorage.removeItem(cacheKey);
+                                        resolve();
+                                    });
+
+                                    // Step 3: Fetch fresh data
+                                    const freshResponse = await fetch(url, {
+                                        headers: {
+                                            "Content-Type": "application/json",
+                                            Authorization: `Bearer ${token}`,
+                                        },
+                                    });
+
+                                    if (!freshResponse.ok) {
+                                        throw new Error(`Failed to refresh after status update: ${freshResponse.statusText}`);
+                                    }
+
+                                    const freshData = await freshResponse.json();
+
+                                    // Step 4: Update state with fresh data
+                                    setCampaignsData(freshData);
+
+                                    // Step 5: Optionally re-cache fresh data
+                                    try {
+                                        localStorage.setItem(cacheKey, JSON.stringify(freshData));
+                                    } catch (err) {
+                                        console.warn("Could not re-cache fresh data:", err);
+                                    }
                                 } else {
                                     handleSnackbarOpen("Failed to update status!", "error");
                                 }

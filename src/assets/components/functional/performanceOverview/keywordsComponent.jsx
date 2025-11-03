@@ -114,8 +114,130 @@ const KeywordsComponent = () => {
         }
     };
 
-    const handleRefresh = () => {
-        getKeywordsData(true);
+    const handleRefresh = async () => {
+        try {
+            setIsLoading(true);
+
+            const startDate = formatDate(dateRange[0].startDate);
+            const endDate = formatDate(dateRange[0].endDate);
+            const ts = `&_=${Date.now()}`;
+
+            let url = `https://react-api-script.onrender.com/sugar/keywords?start_date=${startDate}&end_date=${endDate}&platform=${operator}${ts}`;
+            if (selectedBrand && typeof selectedBrand === "string") {
+                url += `&brand_name=${encodeURIComponent(selectedBrand)}`;
+            }
+
+            const cacheKey = `cache:GET:${url}`;
+
+            await new Promise((resolve) => {
+                localStorage.removeItem(cacheKey);
+                resolve();
+            });
+
+            const token = localStorage.getItem("accessToken");
+            if (!token) throw new Error("Missing access token");
+
+            const response = await fetch(url, {
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${token}`,
+                },
+            });
+
+            if (!response.ok) {
+                throw new Error(`Failed to refresh: ${response.statusText}`);
+            }
+
+            const freshData = await response.json();
+            setKeywordsData(freshData);
+
+            try {
+                localStorage.setItem(cacheKey, JSON.stringify(freshData));
+            } catch (err) {
+                console.warn("Could not re-cache fresh data:", err);
+            }
+        } catch (error) {
+            console.error("Error during refresh:", error);
+            handleSnackbarOpen("Failed to refresh data", "error");
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    // Optimized bid update handler - only updates the specific bid value
+    const handleBidUpdate = async (campaignId, updatedKeyword, newBid, updatedKeywordType) => {
+        console.log('Updating bid locally:', {
+            campaignId,
+            keyword: updatedKeyword,
+            keywordType: updatedKeywordType,
+            newBid,
+        });
+
+        // Immediately update local state for instant UI feedback
+        setKeywordsData(prevData => {
+            if (!prevData.data) return prevData;
+
+            const updatedData = {
+                ...prevData,
+                data: prevData.data.map(row => {
+                    // For Blinkit
+                    if (operator === "Blinkit" &&
+                        row.campaign_id === campaignId &&
+                        row.keyword === updatedKeyword &&
+                        row.keyword_type === updatedKeywordType) {
+                        return { ...row, avg_cpm: newBid };
+                    }
+                    // For Zepto
+                    if (operator === "Zepto" &&
+                        row.campaign_id === campaignId &&
+                        row.keyword_name === updatedKeyword &&
+                        row.match_type === updatedKeywordType) {
+                        return { ...row, bid: newBid };
+                    }
+                    return row;
+                }),
+            };
+
+            console.log('Updated keywordsData locally');
+            return updatedData;
+        });
+
+        // Optional: Update cache with new bid value
+        try {
+            const startDate = formatDate(dateRange[0].startDate);
+            const endDate = formatDate(dateRange[0].endDate);
+            let url = `https://react-api-script.onrender.com/sugar/keywords?start_date=${startDate}&end_date=${endDate}&platform=${operator}`;
+            if (selectedBrand && selectedBrand.trim() !== "") {
+                url += `&brand_name=${encodeURIComponent(selectedBrand)}`;
+            }
+            const cacheKey = `cache:GET:${url}`;
+            
+            // Update cached data
+            const cachedData = getCache(cacheKey);
+            if (cachedData && cachedData.data) {
+                const updatedCache = {
+                    ...cachedData,
+                    data: cachedData.data.map(row => {
+                        if (operator === "Blinkit" &&
+                            row.campaign_id === campaignId &&
+                            row.keyword === updatedKeyword &&
+                            row.keyword_type === updatedKeywordType) {
+                            return { ...row, avg_cpm: newBid };
+                        }
+                        if (operator === "Zepto" &&
+                            row.campaign_id === campaignId &&
+                            row.keyword_name === updatedKeyword &&
+                            row.match_type === updatedKeywordType) {
+                            return { ...row, bid: newBid };
+                        }
+                        return row;
+                    }),
+                };
+                localStorage.setItem(cacheKey, JSON.stringify(updatedCache));
+            }
+        } catch (error) {
+            console.warn("Could not update cache:", error);
+        }
     };
 
     useEffect(() => {
@@ -152,7 +274,6 @@ const KeywordsComponent = () => {
         setConfirmation({ show: true, campaignType, keywordId, targetId, adGroupId, campaignId });
     };
 
-    // Helper to display keyword or fallback
     const getKeywordDisplay = (keyword) => {
         if (!keyword || keyword === 0 || keyword === "0") {
             return "N/A";
@@ -203,7 +324,6 @@ const KeywordsComponent = () => {
                 const keyword = params.row.keyword;
                 const keywordType = params.row.keyword_type;
                 
-                // Don't show BidCell for SPR campaigns (keyword === 0)
                 if (!keyword || keyword === 0 || keyword === "0") {
                     return (
                         <Box sx={{ display: "flex", alignItems: "center", height: "100%" }}>
@@ -222,19 +342,7 @@ const KeywordsComponent = () => {
                         keyword={keyword}
                         keywordType={keywordType}
                         platform={operator}
-                        onUpdate={(campaignId, updatedKeyword, newBid, updatedKeywordType) => {
-                            // Clear cache and refresh data after bid update
-                            const startDate = formatDate(dateRange[0].startDate);
-                            const endDate = formatDate(dateRange[0].endDate);
-                            const ts = `&_=${Date.now()}`;
-                            let url = `https://react-api-script.onrender.com/sugar/keywords?start_date=${startDate}&end_date=${endDate}&platform=${operator}${ts}`;
-                            if (selectedBrand && selectedBrand.trim() !== "") {
-                                url += `&brand_name=${encodeURIComponent(selectedBrand)}`;
-                            }
-                            const cacheKey = `cache:GET:${url}`;
-                            try { localStorage.removeItem(cacheKey); } catch (_) {}
-                            getKeywordsData(true);
-                        }}
+                        onUpdate={handleBidUpdate}
                         onSnackbarOpen={handleSnackbarOpen}
                     />
                 );
@@ -327,7 +435,7 @@ const KeywordsComponent = () => {
         },
     ];
 
-       const KeywordsColumnZepto = [
+    const KeywordsColumnZepto = [
         {
             field: "keyword_name",
             headerName: "TARGET",
@@ -363,64 +471,41 @@ const KeywordsComponent = () => {
             }
         },
         {
-  field: "bid",
-  headerName: "BID",
-  minWidth: 150,
-  renderCell: (params) => {
-    const keyword = params.row.keyword_name;
-    const keywordType = params.row.match_type;
+            field: "bid",
+            headerName: "BID",
+            minWidth: 150,
+            renderCell: (params) => {
+                const keyword = params.row.keyword_name;
+                const keywordType = params.row.match_type;
 
-    if (!keyword || keyword === 0 || keyword === "0") {
-      return (
-        <Box sx={{ display: "flex", alignItems: "center", height: "100%" }}>
-          <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-            {params.row.bid ? params.row.bid.toFixed(2) : "N/A"}
-          </Typography>
-        </Box>
-      );
-    }
+                if (!keyword || keyword === 0 || keyword === "0") {
+                    return (
+                        <Box sx={{ display: "flex", alignItems: "center", height: "100%" }}>
+                            <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                                {params.row.bid ? params.row.bid.toFixed(2) : "N/A"}
+                            </Typography>
+                        </Box>
+                    );
+                }
 
-    return (
-      <BidCell
-        value={params.row.bid}
-        campaignId={params.row.campaign_id}
-        campaignType={params.row.campaign_type}
-        keyword={keyword}
-        keywordType={keywordType}
-        platform={operator}
-        brand_name={params.row.brand_name}
-        onUpdate={(campaignId, updatedKeyword, newBid, updatedKeywordType) => {
-          console.log('Updating keyword bid:', {
-            campaignId,
-            keyword: updatedKeyword,
-            keywordType: updatedKeywordType,
-            newBid,
-          });
-
-          setKeywordsData(prevData => {
-            const updatedData = {
-              ...prevData,
-              data: prevData.data.map(row =>
-                row.campaign_id === campaignId &&
-                row.keyword_name === updatedKeyword &&
-                row.keyword_type === updatedKeywordType
-                  ? { ...row, bid: newBid }
-                  : row
-              ),
-            };
-            console.log('Updated keywordsData:', updatedData);
-            return updatedData;
-          });
-        }}
-        onSnackbarOpen={handleSnackbarOpen}
-      />
-    );
-  }, 
-  type: "number", 
-  align: "left",
-  headerAlign: "left",
-}
-,
+                return (
+                    <BidCell
+                        value={params.row.bid}
+                        campaignId={params.row.campaign_id}
+                        campaignType={params.row.campaign_type}
+                        keyword={keyword}
+                        keywordType={keywordType}
+                        platform={operator}
+                        brand_name={params.row.brand_name}
+                        onUpdate={handleBidUpdate}
+                        onSnackbarOpen={handleSnackbarOpen}
+                    />
+                );
+            }, 
+            type: "number", 
+            align: "left",
+            headerAlign: "left",
+        },
         {
             field: "impressions",
             headerName: "IMPRESSIONS",
@@ -498,7 +583,7 @@ const KeywordsComponent = () => {
             align: "left",
             headerAlign: "left",
         },
-         {
+        {
             field: "ctr",
             headerName: "CTR",
             minWidth: 150,
@@ -509,7 +594,7 @@ const KeywordsComponent = () => {
             align: "left",
             headerAlign: "left",
         },
-         {
+        {
             field: "cvr",
             headerName: "CVR",
             minWidth: 150,
@@ -520,7 +605,7 @@ const KeywordsComponent = () => {
             align: "left",
             headerAlign: "left",
         },
-         {
+        {
             field: "cpm",
             headerName: "CPM",
             minWidth: 150,
@@ -531,7 +616,7 @@ const KeywordsComponent = () => {
             align: "left",
             headerAlign: "left",
         },
-         {
+        {
             field: "cpc",
             headerName: "CPC",
             minWidth: 150,
@@ -556,7 +641,6 @@ const KeywordsComponent = () => {
     }, [operator, brands, updatingKeywords]);
 
     const handleKeywordClick = async (keywordName, campaignId) => {
-        // Don't allow clicking for SPR campaigns
         if (!keywordName || keywordName === 0 || keywordName === "0") {
             return;
         }

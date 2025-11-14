@@ -6,7 +6,7 @@ import AddRuleCreator from "../addRuleCreator";
 const EditRuleModal = (props) => {
 
     const { showEditRuleModal,
-        setShowEditRuleModal, editRuleData, getRulesData } = props;
+        setShowEditRuleModal, editRuleData, getRulesData, operator} = props;
     return (
         <Modal show={showEditRuleModal} onHide={() => setShowEditRuleModal(false)} size="md">
             <Modal.Header className="border-bottom" closeButton>
@@ -19,7 +19,11 @@ const EditRuleModal = (props) => {
                     <AddRuleCreator
                         getRulesData={getRulesData}
                         setShowRuleModal={setShowEditRuleModal}
-                        showRuleModal={showEditRuleModal} editRuleData={editRuleData} />
+                        showRuleModal={showEditRuleModal} 
+                        editRuleData={editRuleData}
+                        operator = {operator}
+                        
+                        />
                 </ErrorBoundary>
             </Modal.Body>
         </Modal>

@@ -139,6 +139,8 @@ const SmartControlDatatable = () => {
         }
       );
 
+      
+
       if (!response.ok) {
         throw new Error(`Error: ${response.status} ${response.statusText}`);
       }
@@ -424,6 +426,7 @@ const SmartControlDatatable = () => {
         showEditRuleModal={showEditRuleModal}
         setShowEditRuleModal={setShowEditRuleModal} 
         editRuleData={selectedRule} 
+        operator={operator}
       />
       
       <NewRuleModal
@@ -451,7 +454,7 @@ const SmartControlDatatable = () => {
           </Button>
         </Tooltip>
         
-        <Button
+       {/* <Button
           variant="contained"
           startIcon={<AddIcon />}
           onClick={() => setShowAddRuleModal(true)}
@@ -463,7 +466,7 @@ const SmartControlDatatable = () => {
           }}
         >
           Add Rule
-        </Button>
+        </Button>*/}
       </Box>
 
       <div className="datatable-con">

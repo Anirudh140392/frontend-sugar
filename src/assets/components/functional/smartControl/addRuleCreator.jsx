@@ -6,27 +6,15 @@ import TextFieldComponent from "../../molecules/textFieldCompnent";
 
 const AddRuleCreator = (props) => {
 
-    const { editRuleData, setShowRuleModal, getRulesData, operator, isEditMode = false } = props;
+    const { editRuleData, setShowRuleModal, getRulesData, operator} = props;
 
-    const [ruleData, setRuleData] = useState({
-        rule_name: "",
-        campaign_type: "",
-        rule_type: "",
-        operation_name: "",
-        operation_type: "",
-        limit_value: "",
-        extension_date: "",
-        frequency: "Once a day",
-        description: "",
-        filters: [{ spends: 0, spends_op: "eq" }]
-    });
+    const [ruleData, setRuleData] = useState({});
     const [showFilters, setShowFilters] = useState(false);
-    
     useEffect(() => {
-        if (editRuleData && isEditMode) {
+        if (editRuleData) {
             setRuleData(editRuleData);
         }
-    }, [editRuleData, isEditMode]);
+    }, [editRuleData]);
 
     const normalizeFilters = (filters) => {
         return filters.map(obj => {
@@ -39,7 +27,7 @@ const AddRuleCreator = (props) => {
             };
         });
     };
-    
+
     const normalized = Array.isArray(ruleData?.filters) ? normalizeFilters(ruleData.filters) : [];
 
     const getOperatorSymbol = (op) => {
@@ -63,136 +51,60 @@ const AddRuleCreator = (props) => {
         return match ? match[key] : "";
     };
 
-    const handleSave = async () => {
-        // Validation
-        if (!ruleData.rule_name || !ruleData.rule_type) {
-            alert("Please fill in Rule Name and Type");
-            return;
-        }
+   const handleSave = async () => {
+    const payload = {
+        rule_name: ruleData.rule_name || "",
+        operation_name: ruleData.operation_name || "",
+        operation_type: ruleData.operation_type || "",
+        description: ruleData.description || "",
+        limit_value: ruleData.limit_value || "",
+        spends: extractFilterValue(ruleData.filters, "spends"),
+        sales: extractFilterValue(ruleData.filters, "sales"),
+        roas: extractFilterValue(ruleData.filters, "roas"),
+        troas: extractFilterValue(ruleData.filters, "troas"),
+        impression: extractFilterValue(ruleData.filters, "impression"),
+        clicks: extractFilterValue(ruleData.filters, "clicks"),
+        cvr: extractFilterValue(ruleData.filters, "cvr"),
+        acos: extractFilterValue(ruleData.filters, "acos"),
+    };
 
-        if (ruleData.rule_type === "Bid" && (!ruleData.operation_name || !ruleData.operation_type)) {
-            alert("Please fill in all bid-related fields");
-            return;
-        }
+    const accessToken = localStorage.getItem("accessToken");
 
-        if (ruleData.rule_type === "Date Extension" && !ruleData.extension_date) {
-            alert("Please select an extension date");
-            return;
-        }
-
-        const payload = {
-            rule_name: ruleData.rule_name || "",
-            operation_name: ruleData.operation_name || "",
-            operation_type: ruleData.operation_type || "",
-            description: ruleData.description || "",
-            limit_value: ruleData.limit_value || "",
-            rule_type: ruleData.rule_type || "",
-            program_type: ruleData.campaign_type || "",
-            extension_date: ruleData.extension_date || "",
-            frequency: ruleData.frequency || "Once a day",
-            spends: extractFilterValue(ruleData.filters, "spends"),
-            sales: extractFilterValue(ruleData.filters, "sales"),
-            roas: extractFilterValue(ruleData.filters, "roas"),
-            troas: extractFilterValue(ruleData.filters, "troas"),
-            impression: extractFilterValue(ruleData.filters, "impression"),
-            clicks: extractFilterValue(ruleData.filters, "clicks"),
-            cvr: extractFilterValue(ruleData.filters, "cvr"),
-            acos: extractFilterValue(ruleData.filters, "acos"),
-        };
-
-        const accessToken = localStorage.getItem("accessToken");
-        
-        try {
-            let url, method;
-            
-            if (isEditMode) {
-                // Update existing rule
-                const getUpdateRuleUrl = () => {
-                    if (operator === "Blinkit") {
-                        return `https://react-api-script.onrender.com/sugar/update-rule?rule_id=${ruleData.rule_id}&platform=${operator}`;
-                    } else if (operator === "BigBasket") {
-                        return `http://react-api-script.onrender.com/sugar/update-rule?platform=${operator}&rule_id=${ruleData.rule_id}`;
-                    }
-                    return "";
-                };
-                url = getUpdateRuleUrl();
-                method = "PATCH";
-            } else {
-                // Create new rule
-                url = `https://react-api-script.onrender.com/sugar/create-rule?platform=${operator}`;
-                method = "POST";
-            }
-
-            console.log(payload, "payload");
-
-            const response = await fetch(url, {
-                method: method,
+    try {
+        const response = await fetch(
+            `https://react-api-script.onrender.com/sugar/update-rule?rule_id=${ruleData.rule_id}&platform=${operator}`,
+            {
+                method: "PATCH",
                 headers: {
                     "Content-Type": "application/json",
                     Authorization: `Bearer ${accessToken}`,
                 },
-                body: JSON.stringify(payload)
-            });
-
-            const data = await response.json();
-
-            if (response.ok) {
-                alert(isEditMode ? "Rule updated successfully!" : "Rule created successfully!");
-                getRulesData();
-                setShowRuleModal(false);
-            } else {
-                console.error(`${isEditMode ? 'Update' : 'Create'} failed:`, data);
-                alert(data.message || `Failed to ${isEditMode ? 'update' : 'create'} rule.`);
+                body: JSON.stringify(payload),
             }
-        } catch (error) {
-            console.error("Error:", error);
-            alert(`An error occurred while ${isEditMode ? 'updating' : 'creating'} the rule.`);
+        );
+
+        const data = await response.json();
+
+        if (response.ok) {
+            alert("Rule updated successfully!");
+
+            // ✅ CLEAR CACHE
+            sessionStorage.removeItem(`rules_cache_${operator}`);
+
+            // ✅ FORCE FRESH API FETCH
+            getRulesData(true);
+
+            setShowRuleModal(false);
+        } else {
+            console.error("Update failed:", data);
+            alert("Failed to update rule.");
         }
-    };
+    } catch (error) {
+        console.error("Error:", error);
+        alert("An error occurred while updating the rule.");
+    }
+};
 
-    const updateFilterKey = (index, newKey) => {
-        setRuleData(prevState => {
-            const filter = prevState.filters[index];
-            const oldKey = Object.keys(filter).find(k => !k.endsWith('_op'));
-            const oldOp = filter[`${oldKey}_op`];
-            const oldValue = filter[oldKey];
-            
-            const newFilter = {
-                [newKey]: oldValue,
-                [`${newKey}_op`]: oldOp
-            };
-            
-            const updatedFilters = [...prevState.filters];
-            updatedFilters[index] = newFilter;
-            
-            return {
-                ...prevState,
-                filters: updatedFilters
-            };
-        });
-    };
-
-    const updateFilterField = (index, filterName, field, value) => {
-        setRuleData(prevState => {
-            const updatedFilters = prevState.filters.map((f, i) => {
-                if (i === index) {
-                    const key = Object.keys(f).find(k => !k.endsWith('_op'));
-                    if (key === filterName) {
-                        return {
-                            ...f,
-                            [field]: value
-                        };
-                    }
-                }
-                return f;
-            });
-
-            return {
-                ...prevState,
-                filters: updatedFilters
-            };
-        });
-    };
 
     return (
         <React.Fragment>
@@ -208,7 +120,7 @@ const AddRuleCreator = (props) => {
                             mr: 1,
                         }}
                     >
-                        {`report_date = ${isEditMode ? ruleData?.report_type : 'Last 7 days'}`}
+                        {`report_date = ${ruleData?.report_type}`}
                     </Box>
                     <Box
                         sx={{
@@ -219,8 +131,14 @@ const AddRuleCreator = (props) => {
                             py: 0.5,
                         }}
                     >
-                        {`${normalized[0]?.key || 'spends'} ${getOperatorSymbol(normalized[0]?.op || 'eq')} ${normalized[0]?.value || 0}`}
+                        {`${normalized[0]?.key} ${getOperatorSymbol(normalized[0]?.op)} ${normalized[0]?.value}`}
                     </Box>
+                    {/*<Typography component="span" sx={{ ml: 1, color: "#1976d2", fontSize: 12, cursor: "pointer" }}>
+                        Show more
+                    </Typography>
+                    <Typography component="span" sx={{ ml: 1, color: "#1976d2", fontSize: 12, cursor: "pointer" }}>
+                        Edit Filters
+                    </Typography>*/}
                 </Typography>
             </Box>
             <Box sx={{ display: "flex" }} mb={2}>
@@ -256,31 +174,22 @@ const AddRuleCreator = (props) => {
             </Button>
             {showFilters && normalized.map((filter, index) => {
                 const filterName = filter.key;
+                const operationKey = `${filterName}_op`;
                 const filterValue = filter.value;
 
                 return (
                     <div key={index} className="form-group mb-3">
                         <div className="d-flex">
-                            {/* First Select: Filter Name */}
+                            {/* First Select: Filter Name (Disabled) */}
                             <SelectFieldComponent
                                 fieldClass="form-select rounded-end-0"
                                 areaLabel="querySelectorOne"
-                                options={[
-                                    { label: "spends", value: "spends" },
-                                    { label: "sales", value: "sales" },
-                                    { label: "roas", value: "roas" },
-                                    { label: "troas", value: "troas" },
-                                    { label: "clicks", value: "clicks" },
-                                    { label: "impression", value: "impression" },
-                                    { label: "cvr", value: "cvr" },
-                                    { label: "acos", value: "acos" }
-                                ]}
+                                options={[{ label: filterName, value: filterName }]}
                                 value={filterName}
-                                disabled={isEditMode}
-                                onChange={e => !isEditMode && updateFilterKey(index, e.target.value)}
+                                disabled
                             />
 
-                            {/* Second Select: Operation */}
+                            {/* Second Select: Operation (Disabled) */}
                             <SelectFieldComponent
                                 fieldClass="form-select rounded-0 condition-form-select"
                                 areaLabel="queryConditionOne"
@@ -291,11 +200,10 @@ const AddRuleCreator = (props) => {
                                     { label: "<", value: "lt" },
                                     { label: "in", value: "in" }
                                 ]}
-                                disabled={isEditMode}
-                                onChange={e => !isEditMode && updateFilterField(index, filterName, `${filterName}_op`, e.target.value)}
+                                disabled
                             />
 
-                            {/* Third Input: Numeric Field */}
+                            {/* Third Input: Numeric Field (Editable) */}
                             <TextFieldComponent
                                 fieldClass="form-control rounded-start-0"
                                 fieldType="number"
@@ -308,15 +216,13 @@ const AddRuleCreator = (props) => {
 
                                     // Update ruleData in the original structure
                                     setRuleData(prevState => {
-                                        const updatedFilters = prevState.filters.map((f, i) => {
-                                            if (i === index) {
-                                                const key = Object.keys(f).find(k => !k.endsWith('_op'));
-                                                if (key === filterName) {
-                                                    return {
-                                                        ...f,
-                                                        [filterName]: newValue
-                                                    };
-                                                }
+                                        const updatedFilters = prevState.filters.map(f => {
+                                            const key = Object.keys(f).find(k => !k.endsWith('_op'));
+                                            if (key === filterName) {
+                                                return {
+                                                    ...f,
+                                                    [filterName]: newValue
+                                                };
                                             }
                                             return f;
                                         });
@@ -337,99 +243,57 @@ const AddRuleCreator = (props) => {
                 label="Name"
                 value={ruleData?.rule_name || ""}
                 margin="normal"
-                required
                 onChange={(e) => setRuleData({ ...ruleData, rule_name: e.target.value })}
             />
 
-            <TextField
-                fullWidth
-                label="Program Type"
-                value={ruleData?.campaign_type || ""}
-                margin="normal"
-                onChange={(e) => setRuleData({ ...ruleData, campaign_type: e.target.value })}
-            />
-
-            {/* Type Field */}
-            <FormControl fullWidth margin="normal" required>
-                <InputLabel>Type</InputLabel>
-                <Select
-                    label="Type"
-                    value={ruleData?.rule_type || ""}
-                    onChange={(e) => {
-                        const newType = e.target.value;
-                        setRuleData(prevData => ({
-                            ...prevData,
-                            rule_type: newType,
-                            // Reset related fields when type changes
-                            operation_name: "",
-                            operation_type: "",
-                            extension_date: ""
-                        }));
-                    }}
-                >
-                    <MenuItem value="Bid">Bid</MenuItem>
-                    <MenuItem value="Date Extension">Date Extension</MenuItem>
-                </Select>
-            </FormControl>
-
-            {/* Conditional rendering based on Type */}
-            {ruleData?.rule_type === "Bid" && (
-                <>
-                    <Box display="flex" alignItems="center" gap={2} mt={2}>
-                        <FormControl sx={{ width: "45%" }}>
-                            <InputLabel>Actions</InputLabel>
-                            <Select
-                                label="Actions"
-                                value={ruleData?.operation_name || ""}
-                                onChange={(e) =>
-                                    setRuleData({ ...ruleData, operation_name: e.target.value })
-                                }
-                            >
-                                <MenuItem value="In">Increase Bid %</MenuItem>
-                                <MenuItem value="De">Decrease Bid %</MenuItem>
-                            </Select>
-                        </FormControl>
-                        <Typography>by</Typography>
-                        <TextField
-                            type="number"
-                            value={ruleData.operation_type || ""}
-                            sx={{ width: "45%" }}
-                            onChange={(e) =>
-                                setRuleData({ ...ruleData, operation_type: e.target.value })
-                            }
-                        />
-                    </Box>
-                    
-                    <TextField
-                        fullWidth
-                        label="Limit Value (INR)"
-                        type="number"
-                        value={ruleData.limit_value || ""}
-                        margin="normal"
+            <Box display="flex" alignItems="center" gap={2} mt={2}>
+                <FormControl sx={{ width: "45%" }}>
+                    <InputLabel>Actions</InputLabel>
+                    <Select
+                        label="Actions"
+                        value={ruleData?.operation_name || ""}
                         onChange={(e) =>
-                            setRuleData({ ...ruleData, limit_value: e.target.value })
+                            setRuleData({ ...ruleData, operation_name: e.target.value })
                         }
-                    />
-                </>
-            )}
-
-            {ruleData?.rule_type === "Date Extension" && (
+                    >
+                        <MenuItem value="In">Increase Bid %</MenuItem>
+                        <MenuItem value="De">Decrease Bid %</MenuItem>
+                    </Select>
+                </FormControl>
+                <Typography>by</Typography>
                 <TextField
-                    fullWidth
-                    label="Extension Date"
-                    type="date"
-                    value={ruleData?.extension_date || ""}
-                    margin="normal"
-                    InputLabelProps={{
-                        shrink: true,
-                    }}
+                    type="number"
+                    value={ruleData.operation_type || ""}
+                    sx={{ width: "45%" }}
                     onChange={(e) =>
-                        setRuleData({ ...ruleData, extension_date: e.target.value })
+                        setRuleData({ ...ruleData, operation_type: e.target.value })
                     }
                 />
-            )}
+            </Box>
+
+            <TextField
+                fullWidth
+                label={ruleData.limit_value === "max" ? "Maximum (INR)" : "Minimum (INR)"}
+                type="number"
+                value={ruleData.limit_value || ""}
+                margin="normal"
+                onChange={(e) =>
+                    setRuleData({ ...ruleData, limit_value: e.target.value })
+                }
+            />
 
             <Box mt={2}>
+                {/*<Typography variant="subtitle2" mb={1}>
+                    Frequency
+                </Typography>
+                <Box display="flex" alignItems="center" justifyContent="space-between" gap={2}>
+                    <Typography sx={{ width: "30%", background: "e0e0e0" }}>Once in</Typography>
+                    <TextField type="number" defaultValue="2" sx={{ width: "30%" }} />
+                    <Select sx={{ width: "30%" }} defaultValue="day">
+                        <MenuItem value="day">day</MenuItem>
+                        <MenuItem value="week">week</MenuItem>
+                    </Select>
+                    </Box>*/}
                 <TextField
                     fullWidth
                     label="Frequency"
@@ -449,10 +313,8 @@ const AddRuleCreator = (props) => {
                 value={ruleData.description || ""}
                 onChange={(e) => setRuleData({ ...ruleData, description: e.target.value })}
             />
-            <Button onClick={() => setShowRuleModal(false)}>Close</Button>
-            <Button onClick={handleSave} sx={{ marginLeft: "8px" }} variant="contained">
-                {isEditMode ? "Save changes" : "Create Rule"}
-            </Button>
+            <Button onClick={() => setShowRuleModal(false)} >Close</Button>
+            <Button onClick={handleSave} sx={{ marginLeft: "8px" }} variant="contained">Save changes</Button>
         </React.Fragment>
     )
 }

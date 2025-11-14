@@ -1,5 +1,4 @@
-import React, { useEffect, useRef } from "react";
-import { useContext, useMemo } from "react";
+import React, { useEffect, useRef, useState, useContext, useMemo } from "react";
 import { Button } from "@mui/material";
 import OverviewFunnelChart from "./overview/overviewFunnelChart";
 import MuiDataTableComponent from "../../common/muidatatableComponent";
@@ -9,6 +8,7 @@ import ColumnPercentageDataComponent from "../../common/columnPercentageDataComp
 import GoalComponent from "./overview/goalComponent";
 import ErrorBoundary from "../../common/erroBoundryComponent";
 import OnePercentageDataComponent from "../../common/onePercentageComponent";
+import AiAllInsightData from "./overview/AiAllInsightData";
 
 const OverviewComponent = () => {
     
@@ -17,6 +17,7 @@ const OverviewComponent = () => {
     const { brands } = dataContext;
     const [searchParams] = useSearchParams();
     const operator = searchParams.get("operator");
+    const [showInsightsPanel, setShowInsightsPanel] = useState(false);
     
     // Get selectedBrand from URL params like KeywordsComponent
     const selectedBrand = searchParams.get("brand") || "SUGAR Cosmetics";
@@ -572,8 +573,25 @@ const OverviewComponent = () => {
                             </div>
                         </div>
                         <div className="agrregated-shadow-box-con aggregated-view-con mt-4">
-                            <div className="px-3 py-2 d-flex justify-content-end">
+                            <div className="px-3 py-2 d-flex justify-content-end align-items-center gap-2">
                                 <Button variant="contained" size="small" onClick={handleRefresh}>Refresh</Button>
+                                {/* <button
+                                    onClick={() => setShowInsightsPanel(true)}
+                                    className="btn btn-light rounded-pill px-3 py-2 small shadow-sm d-flex align-items-center gap-1"
+                                    style={{ display: 'flex', alignItems: 'center' }}
+                                >
+                                   
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#222e3c" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                        <path d="M9 18h6" />
+                                        <path d="M10 22h4" />
+                                        <path d="M12 2a6 6 0 0 0-4 10c0 2 1 3 1 3h6s1-1 1-3a6 6 0 0 0-4-10z" />
+                                    </svg>
+                                    <span style={{ fontSize: 13 }}>AI Insights</span>
+                                </button>*/}
+                                <AiAllInsightData
+                                    show={showInsightsPanel}
+                                    onClose={() => setShowInsightsPanel(false)}
+                                />
                             </div>
                             <div className="px-3 py-2 border-bottom">
                                 <div className="row">

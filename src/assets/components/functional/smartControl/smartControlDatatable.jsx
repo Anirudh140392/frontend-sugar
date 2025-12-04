@@ -454,7 +454,7 @@ const SmartControlDatatable = () => {
           </Button>
         </Tooltip>
         
-       {/* <Button
+        <Button
           variant="contained"
           startIcon={<AddIcon />}
           onClick={() => setShowAddRuleModal(true)}
@@ -466,7 +466,7 @@ const SmartControlDatatable = () => {
           }}
         >
           Add Rule
-        </Button>*/}
+        </Button>
       </Box>
 
       <div className="datatable-con">

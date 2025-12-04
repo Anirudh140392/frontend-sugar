@@ -686,7 +686,15 @@ const AddRuleCreator = ({ operator, onSave, onClose, setShowRuleModal, open = tr
         </Box>
 
         {/* Content */}
-        <Box sx={{ flex: 1, overflow: 'auto', py: 1.5, px: 2 }}>
+       <Box
+  sx={{
+    flex: 1,
+    overflow: activeStep === 0 ? "hidden" : "auto",
+    px: 2,
+    py: activeStep === 0 ? 1 : 3,     // reduced padding ONLY in step 0
+  }}
+>
+
 
           {jsonError && (
             <Zoom in={!!jsonError}>

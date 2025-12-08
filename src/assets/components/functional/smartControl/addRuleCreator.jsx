@@ -122,6 +122,10 @@ const AddRuleCreator = ({ operator, onSave, onClose, setShowRuleModal, open = tr
   const [keywordsData, setKeywordsData] = useState({});
   const [loadingCampaigns, setLoadingCampaigns] = useState(false);
 
+  const [operationName, setOperationName] = useState("");
+const [operationValue, setOperationValue] = useState("");
+
+
   // Pagination states
   const [campaignPage, setCampaignPage] = useState(1);
   const [campaignPageSize, setCampaignPageSize] = useState(10);
@@ -138,6 +142,7 @@ const AddRuleCreator = ({ operator, onSave, onClose, setShowRuleModal, open = tr
     { value: "troas", label: "TROAS", icon: "📉" },
     { value: "impressions", label: "Impressions", icon: "👁️" },
     { value: "clicks", label: "Clicks", icon: "🖱️" },
+        { value: "limit_value", label: "Limit", icon: "🖱️" },
   ];
 
   const operatorOptions = [
@@ -505,6 +510,9 @@ const AddRuleCreator = ({ operator, onSave, onClose, setShowRuleModal, open = tr
       platform_name: platformName,
       pf_id: PLATFORM_MAP[platformName] || null,
       status: statusFlag,
+      operation_name: operationName || null,
+operation_type: operationValue ? Number(operationValue) : null,
+
       user_id: userId,
       user_name: userName,
       rule_name: ruleName,
@@ -517,12 +525,27 @@ const AddRuleCreator = ({ operator, onSave, onClose, setShowRuleModal, open = tr
       placements,
     };
 
+    // filters.forEach((f) => {
+    //   if (f.value) {
+    //     payload[f.key] = parseFloat(f.value);
+    //     payload[`${f.key}_op`] = f.operator;
+    //   }
+    // });
     filters.forEach((f) => {
-      if (f.value) {
-        payload[f.key] = parseFloat(f.value);
-        payload[`${f.key}_op`] = f.operator;
-      }
-    });
+  if (f.value) {
+    // Always store the numeric value
+    payload[f.key] = parseFloat(f.value);
+
+    // Special rule: limit_value → send limit_type
+    if (f.key === "limit_value") {
+      payload.limit_type = f.operator; // Increase / Decrease
+    } else {
+      // Default behavior for all other filters
+      payload[`${f.key}_op`] = f.operator;
+    }
+  }
+});
+
 
     if (ruleType === "bid") {
       payload.targets = targets.map(t => {
@@ -597,7 +620,7 @@ const AddRuleCreator = ({ operator, onSave, onClose, setShowRuleModal, open = tr
         throw new Error(errorMsg);
       }
 
-      alert("Rule created successfully!");
+      alert("Rule created successfully and will be activated in 6hrs!");
       setJsonError("");
 
       if (onSave) onSave();
@@ -689,7 +712,7 @@ const AddRuleCreator = ({ operator, onSave, onClose, setShowRuleModal, open = tr
        <Box
   sx={{
     flex: 1,
-    overflow: activeStep === 0 ? "hidden" : "auto",
+    overflow: "auto", 
     px: 2,
     py: activeStep === 0 ? 1 : 3,     // reduced padding ONLY in step 0
   }}
@@ -818,6 +841,38 @@ const AddRuleCreator = ({ operator, onSave, onClose, setShowRuleModal, open = tr
             rows={2}             // ↓ reduced height
             sx={{ mb: 3 }}
           />
+
+          {(ruleType === "bid" || ruleType === "budget") && (
+  <Box sx={{ display: "flex", gap: 2, mb: 3 }}>
+    
+    {/* Operation Name */}
+    <FormControl fullWidth>
+      <InputLabel>Operation</InputLabel>
+      <Select
+        value={operationName}
+        label="Operation"
+        onChange={(e) => setOperationName(e.target.value)}
+      >
+        <MenuItem value="Increase">Increase</MenuItem>
+        <MenuItem value="Decrease">Decrease</MenuItem>
+      </Select>
+    </FormControl>
+
+    {/* Operation Value */}
+    <TextField
+      fullWidth
+      label="Operation Value"
+      type="number"
+      inputProps={{ min: 0 }}
+      value={operationValue}
+      onChange={(e) => {
+        const v = e.target.value;
+        if (/^\d*$/.test(v)) setOperationValue(v); // allow integers only
+      }}
+    />
+  </Box>
+)}
+
 
           {/* Frequency Number + Time Side-by-Side */}
           <Box sx={{ display: "flex", gap: 2, mb: 3 }}>

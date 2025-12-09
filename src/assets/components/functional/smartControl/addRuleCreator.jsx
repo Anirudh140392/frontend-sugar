@@ -519,7 +519,7 @@ operation_type: operationValue ? Number(operationValue) : null,
       brand_name: brandName,
       brand_id: BRAND_MAP[brandName?.toLowerCase()] || null,
       description,
-      frequency: frequencyNumber > 1 ? "" : frequency,
+      //frequency: frequencyNumber > 1 ? "" : frequency,
       frequency_number: Number(frequencyNumber) || 1,
 
       placements,
@@ -620,7 +620,7 @@ operation_type: operationValue ? Number(operationValue) : null,
         throw new Error(errorMsg);
       }
 
-      alert("Rule created successfully and will be activated in 6hrs!");
+      alert("Rule created successfully and will be activated in 8hrs!");
       setJsonError("");
 
       if (onSave) onSave();

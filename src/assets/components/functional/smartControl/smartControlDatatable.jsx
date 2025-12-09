@@ -350,7 +350,7 @@ const SmartControlDatatable = () => {
 
     try {
       const response = await fetch(
-        `https://react-api-script.onrender.com/sugar/delete-rule?rule_id=${ruleId}&platform=${operator}`,
+        `https://react-api-script.onrender.com/rules_engine/rules/${ruleId}/delete/`,
         {
           method: "DELETE",
           headers: {

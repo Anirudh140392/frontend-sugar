@@ -62,7 +62,7 @@ const AddRuleCreator = ({ operator, onSave, onClose, setShowRuleModal, open = tr
   const [ruleType, setRuleType] = useState("bid");
   const [errors, setErrors] = useState({});
   const [platformName, setPlatformName] = useState(operator ? operator.toLowerCase() : "");
-  const [statusFlag, setStatusFlag] = useState(0);
+  
 
   const [ruleName, setRuleName] = useState("");
   const [userName, setUserName] = useState("");
@@ -113,7 +113,7 @@ const AddRuleCreator = ({ operator, onSave, onClose, setShowRuleModal, open = tr
       daily_or_total: "",
     },
   ]);
-
+ const [statusFlag, setStatusFlag] = useState(0);
   const [loading, setLoading] = useState(false);
   const [jsonError, setJsonError] = useState("");
 
@@ -509,9 +509,11 @@ const [operationValue, setOperationValue] = useState("");
       TYPE: ruleType,
       platform_name: platformName,
       pf_id: PLATFORM_MAP[platformName] || null,
-      status: statusFlag,
+      status: Number(statusFlag),
+
       operation_name: operationName || null,
 operation_type: operationValue ? Number(operationValue) : null,
+
 
       user_id: userId,
       user_name: userName,
@@ -904,6 +906,48 @@ operation_type: operationValue ? Number(operationValue) : null,
               <Box sx={{ flex: 1 }} /> // keeps alignment clean
             )}
           </Box>
+          {/* Status Toggle */}
+{/* Sea Blue Status Toggle */}
+<Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 3 }}>
+  <Typography sx={{ color: "#333", fontWeight: 600 }}>
+    Status
+  </Typography>
+
+  <Box
+    onClick={() => setStatusFlag(prev => (Number(prev) === 1 ? 0 : 1))}
+
+    sx={{
+      width: 52,
+      height: 28,
+      borderRadius: 50,
+      background: statusFlag === 1 ? "#0288d1" : "#b0bec5",
+      position: "relative",
+      cursor: "pointer",
+      transition: "all 0.3s ease",
+      boxShadow: "inset 0 0 5px rgba(0,0,0,0.2)",
+    }}
+  >
+    <Box
+      sx={{
+        width: 24,
+        height: 24,
+        borderRadius: "50%",
+        background: "#ffffff",
+        position: "absolute",
+        top: "2px",
+        left: statusFlag === 1 ? "26px" : "2px",
+        transition: "all 0.3s ease",
+        boxShadow: "0 2px 4px rgba(0,0,0,0.3)",
+      }}
+    />
+  </Box>
+
+  <Typography sx={{ color: statusFlag === 1 ? "#0288d1" : "#777", fontWeight: 600 }}>
+    {statusFlag === 1 ? "ON" : "OFF"}
+  </Typography>
+</Box>
+
+
         </CardContent>
       </Card>
     </Box>

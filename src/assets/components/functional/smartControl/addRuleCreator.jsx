@@ -62,7 +62,7 @@ const AddRuleCreator = ({ operator, onSave, onClose, setShowRuleModal, open = tr
   const [ruleType, setRuleType] = useState("bid");
   const [errors, setErrors] = useState({});
   const [platformName, setPlatformName] = useState(operator ? operator.toLowerCase() : "");
-  
+
 
   const [ruleName, setRuleName] = useState("");
   const [userName, setUserName] = useState("");
@@ -113,9 +113,11 @@ const AddRuleCreator = ({ operator, onSave, onClose, setShowRuleModal, open = tr
       daily_or_total: "",
     },
   ]);
- const [statusFlag, setStatusFlag] = useState(0);
+  const [statusFlag, setStatusFlag] = useState(0);
   const [loading, setLoading] = useState(false);
   const [jsonError, setJsonError] = useState("");
+  const [hasMoreCampaigns, setHasMoreCampaigns] = useState(true);
+
 
   // API data states
   const [campaignsData, setCampaignsData] = useState([]);
@@ -123,13 +125,14 @@ const AddRuleCreator = ({ operator, onSave, onClose, setShowRuleModal, open = tr
   const [loadingCampaigns, setLoadingCampaigns] = useState(false);
 
   const [operationName, setOperationName] = useState("");
-const [operationValue, setOperationValue] = useState("");
+  const [operationValue, setOperationValue] = useState("");
 
 
   // Pagination states
   const [campaignPage, setCampaignPage] = useState(1);
-  const [campaignPageSize, setCampaignPageSize] = useState(10);
-  const [keywordPage, setKeywordPage] = useState({});
+  const [campaignPageSize, setCampaignPageSize] = useState(5);
+  const [keywordPage, setKeywordPage] = useState(1);
+  const [keywordPageSize, setKeywordPageSize] = useState(5);
 
   // Available filter metrics
   const filterMetrics = [
@@ -142,7 +145,7 @@ const [operationValue, setOperationValue] = useState("");
     { value: "troas", label: "TROAS", icon: "📉" },
     { value: "impressions", label: "Impressions", icon: "👁️" },
     { value: "clicks", label: "Clicks", icon: "🖱️" },
-        { value: "limit_value", label: "Limit", icon: "🖱️" },
+    { value: "limit_value", label: "Limit", icon: "🖱️" },
   ];
 
   const operatorOptions = [
@@ -154,64 +157,74 @@ const [operationValue, setOperationValue] = useState("");
   ];
 
   const steps = ['Basic Info', 'Filters', 'Configuration'];
+  const loadMoreCampaigns = (page) => {
+    setCampaignPage(page);
+    fetchCampaigns(true, new AbortController());
+  };
+
+
+  const fetchCampaigns = async (isMounted, abortController) => {
+    if (!brandName || !platformName) {
+      if (isMounted) setCampaignsData([]);
+      return;
+    }
+
+    const brandId = BRAND_MAP[brandName?.toLowerCase()];
+    if (!brandId) return;
+
+    if (isMounted) setLoadingCampaigns(true);
+
+    try {
+      const token = localStorage.getItem("accessToken");
+
+      const response = await fetch(
+        `https://react-api-script.onrender.com/rules_engine/metadata/campaigns/?brand_id=${brandId}&platform=${platformName}&page=${campaignPage}&page_size=${campaignPageSize}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+          signal: abortController.signal,
+        }
+      );
+
+      if (!response.ok) throw new Error("Failed to fetch campaigns");
+
+      const json = await response.json();
+
+      // your API returns {data: []}
+      const list = json.data || json.campaigns || []; 
+
+      const newCampaigns = list?.data?.map((c) => ({
+        campaign_id:
+          c.campaign_id ?? c.id ?? c.CampaignId ?? c.campaignId ?? c.campaignID,
+        campaign_name:
+          c.campaign_name ?? c.name ?? c.campaignName ?? c.title ?? "",
+      }));
+
+      if (!isMounted) return;
+
+      // PAGE 1 → replace
+      // PAGE > 1 → append
+      setCampaignsData((prev) =>
+        campaignPage === 1 ? newCampaigns : [...prev, ...newCampaigns]
+      );
+
+      // enable/disable infinite scroll
+      setHasMoreCampaigns(newCampaigns.length === campaignPageSize);
+
+    } catch (err) {
+      if (err.name !== "AbortError") console.error(err);
+      if (isMounted) setCampaignsData([]);
+    } finally {
+      if (isMounted) setLoadingCampaigns(false);
+    }
+  };
 
   // Fetch campaigns when brandName and platformName change
   useEffect(() => {
     let isMounted = true;
     const abortController = new AbortController();
 
-    const fetchCampaigns = async () => {
-      if (!brandName || !platformName) {
-        if (isMounted) setCampaignsData([]);
-        return;
-      }
 
-      const brandId = BRAND_MAP[brandName?.toLowerCase()];
-      if (!brandId) {
-        if (isMounted) {
-          setCampaignsData([]);
-          setLoadingCampaigns(false);
-        }
-        return;
-      }
-
-      if (isMounted) setLoadingCampaigns(true);
-      try {
-        const token = localStorage.getItem("accessToken");
-        const response = await fetch(
-          `https://react-api-script.onrender.com/rules_engine/metadata/campaigns/?brand_id=${brandId}&platform=${platformName}`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-            signal: abortController.signal,
-          }
-        );
-
-        if (!response.ok) throw new Error("Failed to fetch campaigns");
-
-        const data = await response.json();
-        const campaignsList = Array.isArray(data) ? data : (data?.data || data?.campaigns || []);
-        const mappedCampaigns = (campaignsList || []).map((c) => ({
-          campaign_id: c.campaign_id ?? c.id ?? c.CampaignId ?? c.campaignId ?? c.campaignID,
-          campaign_name:
-            c.campaign_name ?? c.name ?? c.campaignName ?? c.title ?? String(c.campaign_id ?? c.id ?? ""),
-        }));
-        if (isMounted) {
-          setCampaignsData(mappedCampaigns);
-          setCampaignPage(1);
-        }
-      } catch (err) {
-        if (err.name !== "AbortError") {
-          console.error("Error fetching campaigns:", err);
-        }
-        if (isMounted) setCampaignsData([]);
-      } finally {
-        if (isMounted) setLoadingCampaigns(false);
-      }
-    };
-
-    fetchCampaigns();
+    fetchCampaigns(isMounted, abortController);
 
     return () => {
       isMounted = false;
@@ -228,7 +241,7 @@ const [operationValue, setOperationValue] = useState("");
     try {
       const token = localStorage.getItem("accessToken");
       const response = await fetch(
-        `https://react-api-script.onrender.com/rules_engine/metadata/campaigns/${campaignId}/?brand_id=${brandId}&platform=${platformName}`,
+        `https://react-api-script.onrender.com/rules_engine/metadata/campaigns/${campaignId}/?brand_id=${brandId}&platform=${platformName}&page=${keywordPage}&page_size=${keywordPageSize}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -509,10 +522,10 @@ const [operationValue, setOperationValue] = useState("");
       TYPE: ruleType,
       platform_name: platformName,
       pf_id: PLATFORM_MAP[platformName] || null,
-      status: Number(statusFlag),
+      STATUS: Number(statusFlag),
 
       operation_name: operationName || null,
-operation_type: operationValue ? Number(operationValue) : null,
+      operation_type: operationValue ? Number(operationValue) : null,
 
 
       user_id: userId,
@@ -534,19 +547,19 @@ operation_type: operationValue ? Number(operationValue) : null,
     //   }
     // });
     filters.forEach((f) => {
-  if (f.value) {
-    // Always store the numeric value
-    payload[f.key] = parseFloat(f.value);
+      if (f.value) {
+        // Always store the numeric value
+        payload[f.key] = parseFloat(f.value);
 
-    // Special rule: limit_value → send limit_type
-    if (f.key === "limit_value") {
-      payload.limit_type = f.operator; // Increase / Decrease
-    } else {
-      // Default behavior for all other filters
-      payload[`${f.key}_op`] = f.operator;
-    }
-  }
-});
+        // Special rule: limit_value → send limit_type
+        if (f.key === "limit_value") {
+          payload.limit_type = f.operator; // Increase / Decrease
+        } else {
+          // Default behavior for all other filters
+          payload[`${f.key}_op`] = f.operator;
+        }
+      }
+    });
 
 
     if (ruleType === "bid") {
@@ -654,7 +667,7 @@ operation_type: operationValue ? Number(operationValue) : null,
       onClose={onClose || (() => setShowRuleModal(false))}
       sx={{
         '& .MuiDrawer-paper': {
-        width: { xs: '90%', sm: '70%', md: '55%', lg: '52%' },
+          width: { xs: '90%', sm: '70%', md: '55%', lg: '52%' },
 
 
           background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
@@ -711,14 +724,14 @@ operation_type: operationValue ? Number(operationValue) : null,
         </Box>
 
         {/* Content */}
-       <Box
-  sx={{
-    flex: 1,
-    overflow: "auto", 
-    px: 2,
-    py: activeStep === 0 ? 1 : 3,     // reduced padding ONLY in step 0
-  }}
->
+        <Box
+          sx={{
+            flex: 1,
+            overflow: "auto",
+            px: 2,
+            py: activeStep === 0 ? 1 : 3,     // reduced padding ONLY in step 0
+          }}
+        >
 
 
           {jsonError && (
@@ -737,222 +750,222 @@ operation_type: operationValue ? Number(operationValue) : null,
             </Zoom>
           )}
 
-         
-         {/* Step 0: Basic Info */}
-{activeStep === 0 && (
-  <Fade in={activeStep === 0}>
-    <Box>
-      <Card
-        sx={{
-          background: 'rgba(255,255,255,0.95)',
-          backdropFilter: 'blur(20px)',
-          borderRadius: 3,
-          mb: 3,
-          boxShadow: '0 8px 32px rgba(0,0,0,0.1)',
-        }}
-      >
-        <CardContent sx={{ p: 4 }}>
-          <Typography variant="h6" sx={{ mb: 3, color: '#333', fontWeight: 600 }}>
-            Rule Type & Platform
-          </Typography>
 
-          {/* Rule Type + Platform Side-by-Side */}
-          <Box sx={{ display: "flex", gap: 2, mb: 3 }}>
-            <FormControl fullWidth>
-              <InputLabel>Rule Type</InputLabel>
-              <Select value={ruleType} label="Rule Type" onChange={(e) => setRuleType(e.target.value)}>
-                <MenuItem value="bid">Bid Rule</MenuItem>
-                <MenuItem value="status">Status Rule</MenuItem>
-                <MenuItem value="budget">Budget Rule</MenuItem>
-              </Select>
-            </FormControl>
+          {/* Step 0: Basic Info */}
+          {activeStep === 0 && (
+            <Fade in={activeStep === 0}>
+              <Box>
+                <Card
+                  sx={{
+                    background: 'rgba(255,255,255,0.95)',
+                    backdropFilter: 'blur(20px)',
+                    borderRadius: 3,
+                    mb: 3,
+                    boxShadow: '0 8px 32px rgba(0,0,0,0.1)',
+                  }}
+                >
+                  <CardContent sx={{ p: 4 }}>
+                    <Typography variant="h6" sx={{ mb: 3, color: '#333', fontWeight: 600 }}>
+                      Rule Type & Platform
+                    </Typography>
 
-            <FormControl fullWidth>
-              <InputLabel>Platform Name</InputLabel>
-              <Select
-                value={platformName || ""}
-                label="Platform Name"
-                onChange={(e) => setPlatformName(e.target.value?.toLowerCase() || "")}
-                error={!!errors.platform}
-              >
-                {PLATFORM_OPTIONS.map((p) => (
-                  <MenuItem key={p} value={p}>
-                    {p.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          </Box>
+                    {/* Rule Type + Platform Side-by-Side */}
+                    <Box sx={{ display: "flex", gap: 2, mb: 3 }}>
+                      <FormControl fullWidth>
+                        <InputLabel>Rule Type</InputLabel>
+                        <Select value={ruleType} label="Rule Type" onChange={(e) => setRuleType(e.target.value)}>
+                          <MenuItem value="bid">Bid Rule</MenuItem>
+                          <MenuItem value="status">Status Rule</MenuItem>
+                          <MenuItem value="budget">Budget Rule</MenuItem>
+                        </Select>
+                      </FormControl>
 
-          {/* User Name + Rule Name Side-by-Side */}
-          <Box sx={{ display: "flex", gap: 2, mb: 3 }}>
-            <TextField
-              fullWidth
-              label="User Name"
-              value={userName}
-              error={!!errors.userName}
-              helperText={errors.userName}
-              onChange={(e) => setUserName(e.target.value)}
-            />
+                      <FormControl fullWidth>
+                        <InputLabel>Platform Name</InputLabel>
+                        <Select
+                          value={platformName || ""}
+                          label="Platform Name"
+                          onChange={(e) => setPlatformName(e.target.value?.toLowerCase() || "")}
+                          error={!!errors.platform}
+                        >
+                          {PLATFORM_OPTIONS.map((p) => (
+                            <MenuItem key={p} value={p}>
+                              {p.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}
+                            </MenuItem>
+                          ))}
+                        </Select>
+                      </FormControl>
+                    </Box>
 
-            <TextField
-              fullWidth
-              label="Rule Name"
-              value={ruleName}
-              error={!!errors.ruleName}
-              helperText={errors.ruleName}
-              onChange={(e) => setRuleName(e.target.value)}
-            />
-          </Box>
+                    {/* User Name + Rule Name Side-by-Side */}
+                    <Box sx={{ display: "flex", gap: 2, mb: 3 }}>
+                      <TextField
+                        fullWidth
+                        label="User Name"
+                        value={userName}
+                        error={!!errors.userName}
+                        helperText={errors.userName}
+                        onChange={(e) => setUserName(e.target.value)}
+                      />
 
-          {/* Brand + Placements Side-by-Side */}
-          <Box sx={{ display: "flex", gap: 2, mb: 3 }}>
-            <FormControl fullWidth>
-              <InputLabel>Brand Name</InputLabel>
-              <Select
-                value={brandName}
-                label="Brand Name"
-                onChange={(e) => setBrandName(e.target.value)}
-                error={!!errors.brandName}
-              >
-                {Object.keys(BRAND_MAP).map((brand) => (
-                  <MenuItem key={brand} value={brand}>
-                    {brand.replace(/\b\w/g, (c) => c.toUpperCase())}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
+                      <TextField
+                        fullWidth
+                        label="Rule Name"
+                        value={ruleName}
+                        error={!!errors.ruleName}
+                        helperText={errors.ruleName}
+                        onChange={(e) => setRuleName(e.target.value)}
+                      />
+                    </Box>
 
-            <FormControl fullWidth>
-              <InputLabel>Placements</InputLabel>
-              <Select value={placements} label="Placements" onChange={(e) => setPlacements(e.target.value)}>
-                <MenuItem value="search">Search</MenuItem>
-                <MenuItem value="display">Display</MenuItem>
-                <MenuItem value="all">All</MenuItem>
-              </Select>
-            </FormControl>
-          </Box>
+                    {/* Brand + Placements Side-by-Side */}
+                    <Box sx={{ display: "flex", gap: 2, mb: 3 }}>
+                      <FormControl fullWidth>
+                        <InputLabel>Brand Name</InputLabel>
+                        <Select
+                          value={brandName}
+                          label="Brand Name"
+                          onChange={(e) => setBrandName(e.target.value)}
+                          error={!!errors.brandName}
+                        >
+                          {Object.keys(BRAND_MAP).map((brand) => (
+                            <MenuItem key={brand} value={brand}>
+                              {brand.replace(/\b\w/g, (c) => c.toUpperCase())}
+                            </MenuItem>
+                          ))}
+                        </Select>
+                      </FormControl>
 
-          {/* Reduced Description Box Height */}
-          <TextField
-            fullWidth
-            label="Description"
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            multiline
-            rows={2}             // ↓ reduced height
-            sx={{ mb: 3 }}
-          />
+                      <FormControl fullWidth>
+                        <InputLabel>Placements</InputLabel>
+                        <Select value={placements} label="Placements" onChange={(e) => setPlacements(e.target.value)}>
+                          <MenuItem value="search">Search</MenuItem>
+                          <MenuItem value="display">Display</MenuItem>
+                          <MenuItem value="all">All</MenuItem>
+                        </Select>
+                      </FormControl>
+                    </Box>
 
-          {(ruleType === "bid" || ruleType === "budget") && (
-  <Box sx={{ display: "flex", gap: 2, mb: 3 }}>
-    
-    {/* Operation Name */}
-    <FormControl fullWidth>
-      <InputLabel>Operation</InputLabel>
-      <Select
-        value={operationName}
-        label="Operation"
-        onChange={(e) => setOperationName(e.target.value)}
-      >
-        <MenuItem value="Increase">Increase</MenuItem>
-        <MenuItem value="Decrease">Decrease</MenuItem>
-      </Select>
-    </FormControl>
+                    {/* Reduced Description Box Height */}
+                    <TextField
+                      fullWidth
+                      label="Description"
+                      value={description}
+                      onChange={(e) => setDescription(e.target.value)}
+                      multiline
+                      rows={2}             // ↓ reduced height
+                      sx={{ mb: 3 }}
+                    />
 
-    {/* Operation Value */}
-    <TextField
-      fullWidth
-      label="Operation Value"
-      type="number"
-      inputProps={{ min: 0 }}
-      value={operationValue}
-      onChange={(e) => {
-        const v = e.target.value;
-        if (/^\d*$/.test(v)) setOperationValue(v); // allow integers only
-      }}
-    />
-  </Box>
-)}
+                    {(ruleType === "bid" || ruleType === "budget") && (
+                      <Box sx={{ display: "flex", gap: 2, mb: 3 }}>
 
+                        {/* Operation Name */}
+                        <FormControl fullWidth>
+                          <InputLabel>Operation</InputLabel>
+                          <Select
+                            value={operationName}
+                            label="Operation"
+                            onChange={(e) => setOperationName(e.target.value)}
+                          >
+                            <MenuItem value="Increase">Increase</MenuItem>
+                            <MenuItem value="Decrease">Decrease</MenuItem>
+                          </Select>
+                        </FormControl>
 
-          {/* Frequency Number + Time Side-by-Side */}
-          <Box sx={{ display: "flex", gap: 2, mb: 3 }}>
-            <TextField
-              fullWidth
-              label="Frequency Number"
-              type="number"
-              value={frequencyNumber}
-              onChange={(e) => {
-                const val = e.target.value;
-                setFrequencyNumber(val);
-                if (Number(val) > 1) setFrequency("");
-              }}
-            />
-
-            {frequencyNumber === "1" || frequencyNumber === 1 ? (
-              <TextField
-                fullWidth
-                type="time"
-                value={frequency}
-                onChange={(e) => setFrequency(e.target.value)}
-                inputProps={{ step: 60 }}
-                InputLabelProps={{ shrink: true }}
-                label="Frequency (HH:MM)"
-                error={!!errors.frequency}
-                helperText={errors.frequency}
-              />
-            ) : (
-              <Box sx={{ flex: 1 }} /> // keeps alignment clean
-            )}
-          </Box>
-          {/* Status Toggle */}
-{/* Sea Blue Status Toggle */}
-<Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 3 }}>
-  <Typography sx={{ color: "#333", fontWeight: 600 }}>
-    Status
-  </Typography>
-
-  <Box
-    onClick={() => setStatusFlag(prev => (Number(prev) === 1 ? 0 : 1))}
-
-    sx={{
-      width: 52,
-      height: 28,
-      borderRadius: 50,
-      background: statusFlag === 1 ? "#0288d1" : "#b0bec5",
-      position: "relative",
-      cursor: "pointer",
-      transition: "all 0.3s ease",
-      boxShadow: "inset 0 0 5px rgba(0,0,0,0.2)",
-    }}
-  >
-    <Box
-      sx={{
-        width: 24,
-        height: 24,
-        borderRadius: "50%",
-        background: "#ffffff",
-        position: "absolute",
-        top: "2px",
-        left: statusFlag === 1 ? "26px" : "2px",
-        transition: "all 0.3s ease",
-        boxShadow: "0 2px 4px rgba(0,0,0,0.3)",
-      }}
-    />
-  </Box>
-
-  <Typography sx={{ color: statusFlag === 1 ? "#0288d1" : "#777", fontWeight: 600 }}>
-    {statusFlag === 1 ? "ON" : "OFF"}
-  </Typography>
-</Box>
+                        {/* Operation Value */}
+                        <TextField
+                          fullWidth
+                          label="Operation Value"
+                          type="number"
+                          inputProps={{ min: 0 }}
+                          value={operationValue}
+                          onChange={(e) => {
+                            const v = e.target.value;
+                            if (/^\d*$/.test(v)) setOperationValue(v); // allow integers only
+                          }}
+                        />
+                      </Box>
+                    )}
 
 
-        </CardContent>
-      </Card>
-    </Box>
-  </Fade>
-)}
+                    {/* Frequency Number + Time Side-by-Side */}
+                    <Box sx={{ display: "flex", gap: 2, mb: 3 }}>
+                      <TextField
+                        fullWidth
+                        label="Frequency Number"
+                        type="number"
+                        value={frequencyNumber}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setFrequencyNumber(val);
+                          if (Number(val) > 1) setFrequency("");
+                        }}
+                      />
+
+                      {frequencyNumber === "1" || frequencyNumber === 1 ? (
+                        <TextField
+                          fullWidth
+                          type="time"
+                          value={frequency}
+                          onChange={(e) => setFrequency(e.target.value)}
+                          inputProps={{ step: 60 }}
+                          InputLabelProps={{ shrink: true }}
+                          label="Frequency (HH:MM)"
+                          error={!!errors.frequency}
+                          helperText={errors.frequency}
+                        />
+                      ) : (
+                        <Box sx={{ flex: 1 }} /> // keeps alignment clean
+                      )}
+                    </Box>
+                    {/* Status Toggle */}
+                    {/* Sea Blue Status Toggle */}
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 3 }}>
+                      <Typography sx={{ color: "#333", fontWeight: 600 }}>
+                        Status
+                      </Typography>
+
+                      <Box
+                        onClick={() => setStatusFlag(prev => (Number(prev) === 1 ? 0 : 1))}
+
+                        sx={{
+                          width: 52,
+                          height: 28,
+                          borderRadius: 50,
+                          background: statusFlag === 1 ? "#0288d1" : "#b0bec5",
+                          position: "relative",
+                          cursor: "pointer",
+                          transition: "all 0.3s ease",
+                          boxShadow: "inset 0 0 5px rgba(0,0,0,0.2)",
+                        }}
+                      >
+                        <Box
+                          sx={{
+                            width: 24,
+                            height: 24,
+                            borderRadius: "50%",
+                            background: "#ffffff",
+                            position: "absolute",
+                            top: "2px",
+                            left: statusFlag === 1 ? "26px" : "2px",
+                            transition: "all 0.3s ease",
+                            boxShadow: "0 2px 4px rgba(0,0,0,0.3)",
+                          }}
+                        />
+                      </Box>
+
+                      <Typography sx={{ color: statusFlag === 1 ? "#0288d1" : "#777", fontWeight: 600 }}>
+                        {statusFlag === 1 ? "ON" : "OFF"}
+                      </Typography>
+                    </Box>
+
+
+                  </CardContent>
+                </Card>
+              </Box>
+            </Fade>
+          )}
 
 
           {/* Step 1: Filters */}
@@ -1129,19 +1142,41 @@ operation_type: operationValue ? Number(operationValue) : null,
 
                             <FormControl fullWidth sx={{ mb: 2 }}>
                               <InputLabel>Campaign</InputLabel>
+
                               <Select
                                 value={t.campaign_id}
                                 label="Campaign"
                                 onChange={(e) => updateTargetField(i, "campaign_id", e.target.value)}
                                 disabled={loadingCampaigns}
+                                MenuProps={{
+                                  PaperProps: {
+                                    style: { maxHeight: 100, overflowY: "auto" },
+                                    onScroll: (e) => {
+                                      const scrollBox = e.target.firstChild;   // <-- Correct scroll element
+
+                                      if (!scrollBox) return;
+
+                                      const isBottom =
+                                        scrollBox.scrollTop + scrollBox.clientHeight >= scrollBox.scrollHeight - 5;
+
+                                      if (isBottom && hasMoreCampaigns && !loadingCampaigns) {
+                                        const nextPage = campaignPage + 1;
+                                        loadMoreCampaigns(nextPage);
+                                      }
+                                    },
+                                  },
+                                }}
                               >
-                                {getPaginatedCampaigns().map((camp) => (
+                                {campaignsData.map((camp) => (
                                   <MenuItem key={camp.campaign_id} value={camp.campaign_id}>
                                     ID: {camp.campaign_id} - {camp.campaign_name}
                                   </MenuItem>
                                 ))}
                               </Select>
+
                             </FormControl>
+
+
 
                             {campaignsData.length > campaignPageSize && (
                               <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1, mb: 2 }}>
@@ -1281,81 +1316,81 @@ operation_type: operationValue ? Number(operationValue) : null,
         </Box>
 
         {/* Footer Actions */}
-      
+
         <Box
-  sx={{
-    position: 'sticky',
-    bottom: 0,
-    background: 'rgba(255,255,255,0.15)',
-    backdropFilter: 'blur(15px)',
-    borderTop: '1px solid rgba(255,255,255,0.2)',
-    p: 2,
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    zIndex: 90,
-  }}
->
-  <Button
-    disabled={activeStep === 0}
-    onClick={() => setActiveStep(activeStep - 1)}
-    startIcon={<NavigateBeforeIcon />}
-    sx={{
-      color: '#fff',
-      textTransform: 'none',
-      '&:hover': { background: 'rgba(255,255,255,0.15)' },
-    }}
-  >
-    Back
-  </Button>
+          sx={{
+            position: 'sticky',
+            bottom: 0,
+            background: 'rgba(255,255,255,0.15)',
+            backdropFilter: 'blur(15px)',
+            borderTop: '1px solid rgba(255,255,255,0.2)',
+            p: 2,
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            zIndex: 90,
+          }}
+        >
+          <Button
+            disabled={activeStep === 0}
+            onClick={() => setActiveStep(activeStep - 1)}
+            startIcon={<NavigateBeforeIcon />}
+            sx={{
+              color: '#fff',
+              textTransform: 'none',
+              '&:hover': { background: 'rgba(255,255,255,0.15)' },
+            }}
+          >
+            Back
+          </Button>
 
-  <Box sx={{ display: 'flex', gap: 2 }}>
-    <Button
-      variant="outlined"
-      onClick={onClose || (() => setShowRuleModal(false))}
-      sx={{
-        color: '#fff',
-        borderColor: 'rgba(255,255,255,0.4)',
-        textTransform: 'none',
-        '&:hover': { borderColor: '#fff' },
-      }}
-    >
-      Cancel
-    </Button>
+          <Box sx={{ display: 'flex', gap: 2 }}>
+            <Button
+              variant="outlined"
+              onClick={onClose || (() => setShowRuleModal(false))}
+              sx={{
+                color: '#fff',
+                borderColor: 'rgba(255,255,255,0.4)',
+                textTransform: 'none',
+                '&:hover': { borderColor: '#fff' },
+              }}
+            >
+              Cancel
+            </Button>
 
-    {activeStep < steps.length - 1 ? (
-      <Button
-        variant="contained"
-        onClick={() => setActiveStep(activeStep + 1)}
-        endIcon={<NavigateNextIcon />}
-        sx={{
-          background: '#fff',
-          color: '#667eea',
-          fontWeight: 600,
-          textTransform: 'none',
-        }}
-      >
-        Next
-      </Button>
-    ) : (
-      <Button
-        variant="contained"
-        onClick={handleSubmit}
-        disabled={loading}
-        startIcon={loading ? <CircularProgress size={20} /> : <SaveIcon />}
-        sx={{
-          background: '#fff',
-          color: '#667eea',
-          fontWeight: 600,
-          minWidth: 140,
-          textTransform: 'none',
-        }}
-      >
-        {loading ? 'Creating...' : 'Create Rule'}
-      </Button>
-    )}
-  </Box>
-</Box>
+            {activeStep < steps.length - 1 ? (
+              <Button
+                variant="contained"
+                onClick={() => setActiveStep(activeStep + 1)}
+                endIcon={<NavigateNextIcon />}
+                sx={{
+                  background: '#fff',
+                  color: '#667eea',
+                  fontWeight: 600,
+                  textTransform: 'none',
+                }}
+              >
+                Next
+              </Button>
+            ) : (
+              <Button
+                variant="contained"
+                onClick={handleSubmit}
+                disabled={loading}
+                startIcon={loading ? <CircularProgress size={20} /> : <SaveIcon />}
+                sx={{
+                  background: '#fff',
+                  color: '#667eea',
+                  fontWeight: 600,
+                  minWidth: 140,
+                  textTransform: 'none',
+                }}
+              >
+                {loading ? 'Creating...' : 'Create Rule'}
+              </Button>
+            )}
+          </Box>
+        </Box>
 
       </Box>
     </Drawer>

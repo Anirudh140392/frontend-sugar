@@ -31,7 +31,7 @@ const CustomFilterPanel = (props) => {
 
 const MuiDataTableComponent = (props) => {
     const { overviewLoading } = useContext(overviewContext)
-    const { columns, data, isExport, isLoading } = props;
+    const { columns, data, isExport, isLoading, dynamicKey = '' } = props;
     const customLocaleText = {
         filterPanelOperator: 'Condition',
     }
@@ -47,28 +47,35 @@ const MuiDataTableComponent = (props) => {
     useEffect(() => {
         if (columns && columns.length > 0) {
             const newVisibilityModel = {};
-            
+            let defaultHiddenColumns = []
+            console.log('dynamicKey', dynamicKey)
             // Hide all percentage change and diff columns by default
-            const defaultHiddenColumns = [
-                'cost_diff', 'total_converted_revenue_diff', 'troas_diff', 'clicks_diff',
-                'total_converted_units_diff', 'roas_diff', 'roi_diff', 'ctr_diff', 'views_diff',
-                'cost_pct_change', 'total_converted_revenue_pct_change', 'clicks_pct_change',
-                'roi_pct_change', 'views_pct_change', 'aov_pct_change', 'cpc_pct_change',
-                'acos_pct_change', 'total_sales_diff', 'cvr_diff', 'orders_diff', 'acos_diff',
-                'cpc_diff', 'aov_diff', 'indirect_sales_diff', 'direct_orders_diff',
-                'indirect_orders_diff', 'roi_direct_diff', 'bsr_change', 'spends_change',
-                'direct_revenue_change', 'ctr_change', 'troas_change', 'rating_change',
-                'price_change', 'roas_direct_change', 'availability_change', 'spend_inr_diff',
-                'sales_inr_diff', 'impressions_diff', 'spend_diff', 'sales_diff',
-                'estimated_budget_consumed_diff', 'direct_atc_diff'
-            ];
+            if (dynamicKey === 'keyword') {
+                defaultHiddenColumns = ['id', 'name', 'module', 'type', 'frequency_type', 'status', 'action']
+
+            } else {
+                defaultHiddenColumns = [
+                    'cost_diff', 'total_converted_revenue_diff', 'troas_diff', 'clicks_diff',
+                    'total_converted_units_diff', 'roas_diff', 'roi_diff', 'ctr_diff', 'views_diff',
+                    'cost_pct_change', 'total_converted_revenue_pct_change', 'clicks_pct_change',
+                    'roi_pct_change', 'views_pct_change', 'aov_pct_change', 'cpc_pct_change',
+                    'acos_pct_change', 'total_sales_diff', 'cvr_diff', 'orders_diff', 'acos_diff',
+                    'cpc_diff', 'aov_diff', 'indirect_sales_diff', 'direct_orders_diff',
+                    'indirect_orders_diff', 'roi_direct_diff', 'bsr_change', 'spends_change',
+                    'direct_revenue_change', 'ctr_change', 'troas_change', 'rating_change',
+                    'price_change', 'roas_direct_change', 'availability_change', 'spend_inr_diff',
+                    'sales_inr_diff', 'impressions_diff', 'spend_diff', 'sales_diff',
+                    'estimated_budget_consumed_diff', 'direct_atc_diff'
+                ];
+            }
+            console.log('columns', columns)
 
             columns.forEach((column, index) => {
                 // Show first 5 columns by default, hide the rest
                 // Also check if column has defaultVisible property
                 if (column.defaultVisible !== undefined) {
                     newVisibilityModel[column.field] = column.defaultVisible;
-                } else if (index < 5) {
+                } else if (index < 7) {
                     newVisibilityModel[column.field] = true;
                 } else if (defaultHiddenColumns.includes(column.field)) {
                     newVisibilityModel[column.field] = false;

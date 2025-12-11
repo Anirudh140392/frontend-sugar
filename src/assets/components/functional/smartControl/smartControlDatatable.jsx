@@ -236,106 +236,137 @@ const SmartControlDatatable = () => {
       ),
     },
     {
-      field: 'action',
-      headerName: 'ACTION',
-      minWidth: 250,
-      renderCell: (params) => (
-        <span className="flex items-center gap-2">
-          {updatingRuleId === params.row.rule_id ? (
-            <div className="w-5 h-5">
-              <CircularProgress size={18} />
-            </div>
-          ) : (
-            <span
-              className="cursor-pointer"
-              onClick={() => toggleRuleStatus(params.row.rule_id, params.row.status)}
-            >
-              {params.row.status === 1 ? <PauseIcon /> : <PlayArrowIcon />}
-            </span>
-          )}
+  field: 'action',
+  headerName: 'ACTION',
+  minWidth: 250,
+  renderCell: (params) => (
+    <span
+      className="flex items-center gap-2"
+      style={{ minWidth: "160px", display: "flex", justifyContent: "flex-start" }} // <-- FIX ADDED
+    >
+      {/* Play / Pause */}
+      <span
+        style={{ width: "28px", display: "flex", justifyContent: "center" }}    // <-- FIXED WIDTH
+      >
+        {updatingRuleId === params.row.rule_id ? (
+          <CircularProgress size={18} />
+        ) : (
           <span
             className="cursor-pointer"
-            onClick={() => {
-              if (!params.row?.type) return;
-              setSelectedRule(params.row);
-              setShowEditRuleModal(true);
-            }}
+            onClick={() =>
+              toggleRuleStatus(params.row.rule_id, params.row.status)
+            }
           >
-            <EditIcon />
+            {params.row.status === 1 ? <PauseIcon /> : <PlayArrowIcon />}
           </span>
-          {deletingRuleId === params.row.id ? (
-            <CircularProgress size={18} />
-          ) : (
-            <span
-              className="cursor-pointer"
-              onClick={() => handleOpenConfirmDialog(params.row)}
-            >
-              <DeleteIcon />
-            </span>
-          )}
+        )}
+      </span>
+
+      {/* Edit */}
+      <span
+        style={{ width: "28px", display: "flex", justifyContent: "center" }}   // <-- FIXED WIDTH
+      >
+        <span
+          className="cursor-pointer"
+          onClick={() => {
+            if (!params.row?.type) return;
+            setSelectedRule(params.row);
+            setShowEditRuleModal(true);
+          }}
+        >
+          <EditIcon />
         </span>
-      ),
-      sortable: false,
-    },
+      </span>
+
+      {/* Delete */}
+      <span
+        style={{ width: "28px", display: "flex", justifyContent: "center" }}   // <-- FIXED WIDTH
+      >
+        {deletingRuleId === params.row.rule_id ? (
+          <CircularProgress size={18} />
+        ) : (
+          <span
+            className="cursor-pointer"
+            onClick={() => handleOpenConfirmDialog(params.row)}
+          >
+            <DeleteIcon />
+          </span>
+        )}
+      </span>
+    </span>
+  ),
+  sortable: false,
+},
+
   ], [updatingRuleId, deletingRuleId]);
 
-  const SmartControlData = rulesData?.data.map((item) => ({
-    ...item,
-    id: item.id,
-    name: item.rule_name,
-    module: "Campaigns",
-    type: item.type,
-    schedule: item.frequency,
-    status: item.status,
-    rule_id: item.rule_id
-  }));
+ const SmartControlData = Array.isArray(rulesData?.data)
+  ? rulesData.data.map((item) => ({
+      ...item,
+      id: item.id,
+      name: item.rule_name,
+      module: "Campaigns",
+      type: item.type,
+      schedule: item.frequency,
+      status: item.status,
+      rule_id: item.rule_id
+    }))
+  : [];
+
+
 
   const toggleRuleStatus = async (ruleId, currentStatus) => {
-    const token = localStorage.getItem("accessToken");
-    if (!token) return;
+  const token = localStorage.getItem("accessToken");
+  if (!token) return;
 
-    setUpdatingRuleId(ruleId);
+  setUpdatingRuleId(ruleId);
 
-    try {
-      const response = await fetch(
-        `https://react-api-script.onrender.com/sugar/play-pause-rule?rule_id=${ruleId}&platform=${operator}`,
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          }
+  try {
+    const response = await fetch(
+      `https://react-api-script.onrender.com/rules_engine/rules/${ruleId}/toggle-status/`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
         }
-      );
-
-      if (!response.ok) {
-        throw new Error(`Error: ${response.status}`);
       }
+    );
 
-      const result = await response.json();
-
-      setRulesData((prevData) => {
-        const updatedData = {
-          ...prevData,
-          data: prevData.data.map(rule =>
-            rule.rule_id === ruleId ? { ...rule, status: result.new_status } : rule
-          )
-        };
-        
-        // Update cache with new data
-        setCachedData(operator, updatedData);
-        return updatedData;
-      });
-
-      handleSnackbarOpen("Rule status updated successfully", "success");
-
-    } catch (error) {
-      console.error("Failed to update rule status:", error.message);
-      handleSnackbarOpen("Failed to update rule status", "error");
-    } finally {
-      setUpdatingRuleId(null);
+    if (!response.ok) {
+      throw new Error(`Error: ${response.status}`);
     }
+
+    const result = await response.json(); 
+    // result.new_status → the latest status
+
+   setRulesData(prevData => {
+  if (!prevData?.data) return prevData;
+
+  const updatedData = {
+    ...prevData,
+    data: prevData.data.map(rule =>
+      rule.rule_id === ruleId
+        ? { ...rule, status: result.new_status }
+        : rule
+    )
   };
+
+  setCachedData(operator, updatedData);
+  return updatedData;
+});
+
+
+    handleSnackbarOpen(result.message || "Rule status updated", "success");
+
+  } catch (error) {
+    console.error("Failed to update rule status:", error.message);
+    handleSnackbarOpen("Failed to update rule status", "error");
+  } finally {
+    setUpdatingRuleId(null);
+  }
+};
+
 
   const deleteRule = async (ruleId, status) => {
     if (status !== 0) {
@@ -367,6 +398,8 @@ const SmartControlDatatable = () => {
       const result = await response.json();
 
       setRulesData((prevData) => {
+  if (!prevData || !Array.isArray(prevData.data)) return prevData; // ⭐ STOP collapsing
+
         const updatedData = {
           ...prevData,
           data: prevData.data.filter(rule => rule.rule_id !== ruleId)
@@ -474,6 +507,7 @@ const SmartControlDatatable = () => {
           isLoading={isLoading}
           columns={SmartControlColumn}
           data={SmartControlData} 
+          dynamicKey='keyword'
         />
       </div>
       

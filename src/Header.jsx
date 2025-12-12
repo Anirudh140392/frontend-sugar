@@ -24,7 +24,7 @@ const Header = () => {
   ];
 
   // Available operators - Flipkart, Zepto, and Blinkit
-  const availableOperators = ["Blinkit","Zepto"];
+  const availableOperators = ["Blinkit","Zepto","Swiggy"];
 
   // Get unique brands for dropdown
   const uniqueBrands = React.useMemo(() => {

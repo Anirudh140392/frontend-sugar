@@ -44,7 +44,7 @@ const TopTabs = (props) => {
                             setShowActiveTab={setShowActiveTab}
                             setValue={PERFORMANCETABS.CAMPAIGNS} />
                     }
-                     {['Amazon','Swiggy','BigBasket'].includes(operatorName) &&
+                     {['Amazon','BigBasket'].includes(operatorName) &&
                         <TabList
                             isShowCount={true}
                             tabText="Placements"
@@ -60,7 +60,7 @@ const TopTabs = (props) => {
                             setShowActiveTab={setShowActiveTab}
                             setValue={PERFORMANCETABS.ADGROUPS} />
                     }
-                    {['Blinkit','Amazon','Zepto','Swiggy','BigBasket'].includes(operatorName) &&
+                    {['Blinkit','Amazon','Zepto','BigBasket'].includes(operatorName) &&
                         <TabList
                             isShowCount={true}
                             tabText="Keywords"
@@ -68,7 +68,7 @@ const TopTabs = (props) => {
                             setShowActiveTab={setShowActiveTab}
                             setValue={PERFORMANCETABS.KEYWORDS} />
                     }
-                    {['Zepto','Swiggy','BigBasket'].includes(operatorName) &&
+                    {['Zepto','BigBasket'].includes(operatorName) &&
                         <TabList
                             isShowCount={true}
                             tabText="Products"

@@ -25,6 +25,7 @@ import {
   useTheme,
   alpha,
 } from "@mui/material";
+import AsyncSearchDropdown from "./modal/AsyncSearchDropdown";
 import AddIcon from "@mui/icons-material/Add";
 import DeleteIcon from "@mui/icons-material/Delete";
 import CloseIcon from "@mui/icons-material/Close";
@@ -127,6 +128,10 @@ const AddRuleCreator = ({ operator, onSave, onClose, setShowRuleModal, open = tr
   const [operationName, setOperationName] = useState("");
   const [operationValue, setOperationValue] = useState("");
 
+  // Async search states
+  const [campaignSearchQuery, setCampaignSearchQuery] = useState("");
+  const [keywordSearchQuery, setKeywordSearchQuery] = useState({});
+
 
   // Pagination states
   const [campaignPage, setCampaignPage] = useState(1);
@@ -163,7 +168,7 @@ const AddRuleCreator = ({ operator, onSave, onClose, setShowRuleModal, open = tr
   };
 
 
-  const fetchCampaigns = async (isMounted, abortController) => {
+  const fetchCampaigns = async (isMounted, abortController, campaignName = "", campaignId = "") => {
     if (!brandName || !platformName) {
       if (isMounted) setCampaignsData([]);
       return;
@@ -177,13 +182,19 @@ const AddRuleCreator = ({ operator, onSave, onClose, setShowRuleModal, open = tr
     try {
       const token = localStorage.getItem("accessToken");
 
-      const response = await fetch(
-        `https://react-api-script.onrender.com/rules_engine/metadata/campaigns/?brand_id=${brandId}&platform=${platformName}&page=${campaignPage}&page_size=${campaignPageSize}`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-          signal: abortController.signal,
-        }
-      );
+      let url = `https://react-api-script.onrender.com/rules_engine/metadata/campaigns/?brand_id=${brandId}&platform=${platformName}&page=${campaignPage}&page_size=25`;
+      
+      if (campaignName) {
+        url += `&campaign_name=${encodeURIComponent(campaignName)}`;
+      }
+      if (campaignId) {
+        url += `&campaign_id=${encodeURIComponent(campaignId)}`;
+      }
+
+      const response = await fetch(url, {
+        headers: { Authorization: `Bearer ${token}` },
+        signal: abortController.signal,
+      });
 
       if (!response.ok) throw new Error("Failed to fetch campaigns");
 
@@ -192,7 +203,7 @@ const AddRuleCreator = ({ operator, onSave, onClose, setShowRuleModal, open = tr
       // your API returns {data: []}
       const list = json.data || json.campaigns || []; 
 
-      const newCampaigns = list?.data?.map((c) => ({
+      const newCampaigns = (list || [])?.map((c) => ({
         campaign_id:
           c.campaign_id ?? c.id ?? c.CampaignId ?? c.campaignId ?? c.campaignID,
         campaign_name:
@@ -207,8 +218,8 @@ const AddRuleCreator = ({ operator, onSave, onClose, setShowRuleModal, open = tr
         campaignPage === 1 ? newCampaigns : [...prev, ...newCampaigns]
       );
 
-      // enable/disable infinite scroll
-      setHasMoreCampaigns(newCampaigns.length === campaignPageSize);
+      // enable/disable infinite scroll (page_size is 5 for campaigns)
+      setHasMoreCampaigns(newCampaigns.length === 5);
 
     } catch (err) {
       if (err.name !== "AbortError") console.error(err);
@@ -232,7 +243,7 @@ const AddRuleCreator = ({ operator, onSave, onClose, setShowRuleModal, open = tr
     };
   }, [brandName, platformName]);
 
-  const fetchKeywords = async (campaignId, index, targetType) => {
+  const fetchKeywords = async (campaignId, index, targetType, searchTerm = "", page = 1) => {
     if (!campaignId || !brandName || !platformName) return;
 
     const brandId = BRAND_MAP[brandName?.toLowerCase()];
@@ -240,14 +251,17 @@ const AddRuleCreator = ({ operator, onSave, onClose, setShowRuleModal, open = tr
 
     try {
       const token = localStorage.getItem("accessToken");
-      const response = await fetch(
-        `https://react-api-script.onrender.com/rules_engine/metadata/campaigns/${campaignId}/?brand_id=${brandId}&platform=${platformName}&page=${keywordPage}&page_size=${keywordPageSize}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
+      let url = `https://react-api-script.onrender.com/rules_engine/metadata/campaigns/${campaignId}/?brand_id=${brandId}&platform=${platformName}&page=${page}&page_size=25`;
+      
+      if (searchTerm) {
+        url += `&search_term=${encodeURIComponent(searchTerm)}`;
+      }
+
+      const response = await fetch(url, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
 
       if (!response.ok) throw new Error("Failed to fetch campaign details");
 
@@ -302,13 +316,114 @@ const AddRuleCreator = ({ operator, onSave, onClose, setShowRuleModal, open = tr
     }
   };
 
-  const getPaginatedCampaigns = () => {
-    const start = (campaignPage - 1) * campaignPageSize;
-    const end = start + campaignPageSize;
-    return campaignsData.slice(start, end);
-  };
+  // Async search handler for campaigns
+ // Async search handler for campaigns
+// Async search handler for campaigns
+const searchCampaigns = async (query, page = 1, signal) => {
+  if (!brandName || !platformName) return { items: [], hasMore: false };
 
-  const totalCampaignPages = Math.ceil(campaignsData.length / campaignPageSize);
+  const brandId = BRAND_MAP[brandName?.toLowerCase()];
+  if (!brandId) return { items: [], hasMore: false };
+
+  try {
+    const token = localStorage.getItem("accessToken");
+    
+    // Base URL with required params and pagination
+    let url = `https://react-api-script.onrender.com/rules_engine/metadata/campaigns/?brand_id=${brandId}&platform=${platformName}&page=${page}&page_size=25`;
+    
+    // Add search params only if query exists
+    if (query && query.trim()) {
+      const trimmedQuery = query.trim();
+      
+      // Check if query is numeric (likely campaign_id)
+      const isNumeric = /^\d+$/.test(trimmedQuery);
+      
+      if (isNumeric) {
+        // Search by campaign_id
+        url += `&campaign_id=${encodeURIComponent(trimmedQuery)}`;
+      } else {
+        // Search by campaign_name
+        url += `&campaign_name=${encodeURIComponent(trimmedQuery)}`;
+      }
+    }
+
+    const response = await fetch(url, {
+      headers: { Authorization: `Bearer ${token}` },
+      signal: signal, // Pass abort signal
+    });
+
+    if (!response.ok) throw new Error("Failed to fetch campaigns");
+
+    const json = await response.json();
+    const list = json.campaigns?.data || json.data || json.campaigns || [];
+
+    const items = (list || []).map((c) => ({
+      id: c.campaign_id ?? c.id ?? c.CampaignId ?? c.campaignId ?? "",
+      name: `ID: ${c.campaign_id ?? c.id} - ${c.campaign_name ?? c.name ?? c.campaignName ?? ""}`,
+      campaign_id: c.campaign_id ?? c.id ?? c.CampaignId ?? c.campaignId ?? "",
+      campaign_name: c.campaign_name ?? c.name ?? c.campaignName ?? c.title ?? "",
+    }));
+
+    // Check if there are more items (page_size is 5)
+    return { items, hasMore: items.length === 5 };
+  } catch (err) {
+    if (err.name !== 'AbortError') {
+      console.error("Error searching campaigns:", err);
+    }
+    return { items: [], hasMore: false };
+  }
+};
+
+  // Async search handler for keywords
+  const searchKeywords = async (campaignId, index, query, page = 1) => {
+    if (!campaignId || !brandName || !platformName) return { items: [], hasMore: false };
+
+    const brandId = BRAND_MAP[brandName?.toLowerCase()];
+    if (!brandId) return { items: [], hasMore: false };
+
+    try {
+      const token = localStorage.getItem("accessToken");
+      
+      let url = `https://react-api-script.onrender.com/rules_engine/metadata/campaigns/${campaignId}/?brand_id=${brandId}&platform=${platformName}&page=${page}&page_size=25`;
+      
+      if (query) {
+        url += `&search_term=${encodeURIComponent(query)}`;
+      }
+
+      const response = await fetch(url, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (!response.ok) throw new Error("Failed to fetch keywords");
+
+      const data = await response.json();
+
+      const keywordsListRaw = Array.isArray(data?.keywords)
+        ? data.keywords
+        : Array.isArray(data?.data)
+          ? data.data
+          : Array.isArray(data)
+            ? data
+            : [];
+
+      const items = (keywordsListRaw || []).map((k) => ({
+        id: k.KeywordName ?? k.keyword ?? k.name ?? "",
+        name: k.KeywordName ?? k.keyword ?? k.name ?? "",
+        keyword: k.KeywordName ?? k.keyword ?? k.name ?? "",
+        KeywordName: k.KeywordName ?? k.keyword ?? k.name ?? "",
+        bid: k.bid ?? k.defaultBid ?? k.default_bid ?? "",
+        match_type: k.KeywordMatchType ?? k.matchType ?? k.match_type ?? "",
+        ad_group_id: k.adGroupId ?? k.ad_group_id ?? k.adgroupId ?? "",
+        ad_group_name: k.adGroupName ?? k.ad_group_name ?? k.adgroupName ?? "",
+        campaign_id: k.campaign_id ?? k.CampaignId ?? campaignId,
+      }));
+
+      return { items, hasMore: items.length === 25 };
+    } catch (err) {
+      console.error("Error searching keywords:", err);
+      return { items: [], hasMore: false };
+    }
+  };
 
   const getCampaignKeywords = (targetIndex, campaignId) => {
     const allKeywords = keywordsData[`target_${targetIndex}`]?.keywords || [];
@@ -432,6 +547,7 @@ const AddRuleCreator = ({ operator, onSave, onClose, setShowRuleModal, open = tr
 
     setTargets(updated);
   };
+  console.log('targets', targets); 
 
   // STATUS RULE FUNCTIONS
   const addAction = () =>
@@ -1140,67 +1256,17 @@ const AddRuleCreator = ({ operator, onSave, onClose, setShowRuleModal, open = tr
                               Target #{i + 1}
                             </Typography>
 
-                            <FormControl fullWidth sx={{ mb: 2 }}>
-                              <InputLabel>Campaign</InputLabel>
-
-                              <Select
-                                value={t.campaign_id}
+                            <Box sx={{ mb: 2 }}>
+                              <AsyncSearchDropdown
                                 label="Campaign"
-                                onChange={(e) => updateTargetField(i, "campaign_id", e.target.value)}
-                                disabled={loadingCampaigns}
-                                MenuProps={{
-                                  PaperProps: {
-                                    style: { maxHeight: 100, overflowY: "auto" },
-                                    onScroll: (e) => {
-                                      const scrollBox = e.target.firstChild;   // <-- Correct scroll element
-
-                                      if (!scrollBox) return;
-
-                                      const isBottom =
-                                        scrollBox.scrollTop + scrollBox.clientHeight >= scrollBox.scrollHeight - 5;
-
-                                      if (isBottom && hasMoreCampaigns && !loadingCampaigns) {
-                                        const nextPage = campaignPage + 1;
-                                        loadMoreCampaigns(nextPage);
-                                      }
-                                    },
-                                  },
-                                }}
-                              >
-                                {campaignsData.map((camp) => (
-                                  <MenuItem key={camp.campaign_id} value={camp.campaign_id}>
-                                    ID: {camp.campaign_id} - {camp.campaign_name}
-                                  </MenuItem>
-                                ))}
-                              </Select>
-
-                            </FormControl>
-
-
-
-                            {campaignsData.length > campaignPageSize && (
-                              <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1, mb: 2 }}>
-                                <IconButton
-                                  size="small"
-                                  disabled={campaignPage === 1}
-                                  onClick={() => setCampaignPage(campaignPage - 1)}
-                                >
-                                  <NavigateBeforeIcon />
-                                </IconButton>
-                                <Chip
-                                  label={`${campaignPage} / ${totalCampaignPages}`}
-                                  size="small"
-                                  sx={{ minWidth: 60 }}
-                                />
-                                <IconButton
-                                  size="small"
-                                  disabled={campaignPage === totalCampaignPages}
-                                  onClick={() => setCampaignPage(campaignPage + 1)}
-                                >
-                                  <NavigateNextIcon />
-                                </IconButton>
-                              </Box>
-                            )}
+                                placeholder="Search campaigns..."
+                                fetchFn={(query, page) => searchCampaigns(query, page)}
+                                onSelect={(item) => updateTargetField(i, "campaign_id", item.campaign_id)}
+                                valueKey="id"
+                                labelKey="name"
+                                selectedValue={t.campaign_name ? `ID: ${t.campaign_id} - ${t.campaign_name}` : ""}
+                              />
+                            </Box>
 
                             {t.campaign_id && (
                               <>
@@ -1218,33 +1284,24 @@ const AddRuleCreator = ({ operator, onSave, onClose, setShowRuleModal, open = tr
 
                                 {t.target_type === "keyword" && (
                                   <>
-                                    <FormControl fullWidth sx={{ mb: 2 }}>
-                                      <InputLabel>Keyword</InputLabel>
-                                      <Select
-                                        value={t.target_identifier}
+                                    <Box sx={{ mb: 2 }}>
+                                      <AsyncSearchDropdown
                                         label="Keyword"
-                                        onChange={(e) => updateTargetField(i, "target_identifier", e.target.value)}
-                                      >
-                                        {(() => {
-                                          const filtered = getCampaignKeywords(i, t.campaign_id) || [];
-                                          const pageSize = 10;
-                                          const currentPage = keywordPage[i] || 1;
-                                          const start = (currentPage - 1) * pageSize;
-                                          const end = start + pageSize;
-                                          const pageItems = filtered.slice(start, end);
-
-                                          if (filtered.length === 0) {
-                                            return <MenuItem disabled>No keywords for this campaign</MenuItem>;
-                                          }
-
-                                          return pageItems.map((kw, idx) => (
-                                            <MenuItem key={`${kw.KeywordName}-${idx}`} value={kw.KeywordName}>
-                                              {kw.KeywordName}
-                                            </MenuItem>
-                                          ));
-                                        })()}
-                                      </Select>
-                                    </FormControl>
+                                        placeholder="Search keywords..."
+                                        fetchFn={(query, page) => searchKeywords(t.campaign_id, i, query, page)}
+                                        onSelect={(item) => {
+                                          updateTargetField(i, "target_identifier", item.KeywordName);
+                                          updateTargetField(i, "keyword_id", item.KeywordName);
+                                          updateTargetField(i, "bid_value", item.bid);
+                                          updateTargetField(i, "match_type", item.match_type);
+                                          updateTargetField(i, "ad_group_id", item.ad_group_id);
+                                          updateTargetField(i, "ad_group_name", item.ad_group_name);
+                                        }}
+                                        valueKey="id"
+                                        labelKey="name"
+                                        selectedValue={t.target_identifier || ""}
+                                      />
+                                    </Box>
 
                                     <TextField fullWidth label="Match Type" value={t.match_type} onChange={(e) => updateTargetField(i, "match_type", e.target.value)} sx={{ mb: 2 }} />
                                     <TextField fullWidth label="Bid Value" type="number" value={t.bid_value ?? ""} onChange={(e) => updateTargetField(i, "bid_value", e.target.value)} sx={{ mb: 2 }} />

@@ -555,18 +555,18 @@ const SuggestedKeywordsDatatable = () => {
 
     const SuggestedKeywordsColumnSwiggy = [
         {
-            field: "keyword",
+            field: "keyword_name",
             headerName: "SEARCH TERM",
             minWidth: 150,
             renderCell: (params) => (
-                <div className="text-icon-div cursor-pointer redirect" onClick={() => handleKeywordClick(params.row.keyword, params.row.campaign_id)}>
-                    <Typography variant="body2">{params.row.keyword}</Typography>
+                <div className="text-icon-div cursor-pointer redirect" onClick={() => handleKeywordClick(params.row.keyword_name, params.row.campaign_id)}>
+                    <Typography variant="body2">{params.row.keyword_name}</Typography>
                 </div>
             ),
         },
         
         
-        { field: "ad_type", headerName: "AD TYPE", minWidth: 150 },
+        { field: "match_type", headerName: "MATCH TYPE", minWidth: 150 },
         {
             field: "campaign_name",
             headerName: "CAMPAIGN NAME",
@@ -591,6 +591,15 @@ const SuggestedKeywordsDatatable = () => {
             ), type: "number", align: "left",
             headerAlign: "left",
         },
+         {
+            field: "orders",
+            headerName: "ORDERS",
+            minWidth: 150,
+            renderCell: (params) => (
+                <ColumnPercentageDataComponent mainValue={params.row.orders} percentValue={params.row.orders_change} />
+            ), type: "number", align: "left",
+            headerAlign: "left",
+        },
        
         {
             field: "spend",
@@ -603,31 +612,31 @@ const SuggestedKeywordsDatatable = () => {
         },
        
         {
-            field: "sales",
+            field: "revenue",
             headerName: "SALES",
             minWidth: 150,
             renderCell: (params) => (
-                <ColumnPercentageDataComponent mainValue={params.row.sales} percentValue={params.row.sales_change} />
+                <ColumnPercentageDataComponent mainValue={params.row.revenue} percentValue={params.row.revenue_change} />
             ), type: "number", align: "left",
             headerAlign: "left",
         },
         
         {
-            field: "a2c_rate",
-            headerName: "ATC RATE",
+            field: "aov",
+            headerName: "AOV",
             minWidth: 150,
             renderCell: (params) => (
-                <ColumnPercentageDataComponent mainValue={params.row.a2c_rate} percentValue={params.row.a2c_rate_change} />
+                <ColumnPercentageDataComponent mainValue={params.row.aov} percentValue={params.row.aov_change} />
             ), type: "number", align: "left",
             headerAlign: "left",
         },
         
          {
-            field: "roi",
+            field: "roas",
             headerName: "ROAS",
             minWidth: 150,
             renderCell: (params) => (
-                <ColumnPercentageDataComponent mainValue={params.row.roi} percentValue={params.row.roi_change} />
+                <ColumnPercentageDataComponent mainValue={params.row.roas} percentValue={params.row.roas_change} />
             ), type: "number", align: "left",
             headerAlign: "left",
         },

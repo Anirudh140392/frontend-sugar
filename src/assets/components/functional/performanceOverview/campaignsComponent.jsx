@@ -560,19 +560,16 @@ const CampaignsComponent = (props, ref) => {
             type: "number",
             align: "left",
         },     
-        {
-            field: "status",
+       {
+            field: "final_status",
             headerName: "STATUS",
-            minWidth: 120,
+            minWidth: 100,
             align: "center",
             headerAlign: "center",
             renderCell: (params) => {
-                const status = params.row.status;
-                const campaignId = params.row.campaign_id;
-                const brandName = params.row.brand_name;
+                const status = params.row.final_status;
 
-                // Show loading spinner if this campaign is being updated
-                if (updatingCampaigns[campaignId]) {
+                if (updatingCampaigns[params.row.campaign_id]) {
                     return (
                         <Box sx={{ height: "100%", display: "flex", justifyContent: "center", alignItems: "center" }}>
                             <CircularProgress size={24} />
@@ -580,31 +577,23 @@ const CampaignsComponent = (props, ref) => {
                     );
                 }
 
-                // Disable toggle for ENDED and DAILY_BUDGET_EXHAUSTED
-                const isDisabled = status === "ENDED" || status === "DAILY_BUDGET_EXHAUSTED";
-                // Toggle ON for ACTIVE, OFF for PAUSED
-                const isActive = status === "ACTIVE";
+                // Toggle is ON for ACTIVE or ON_HOLD
+                // Toggle is OFF for STOPPED
+                const isActive = isStatusActive(status);
 
                 return (
                     <Switch
                         checked={isActive}
-                        disabled={isDisabled}
-                        onChange={() => {
-                            // Show confirmation dialog before changing status
-                            // Include currentStatus so the API receives the current state (not the new one)
-                            setConfirmation({
-                                show: true,
-                                campaignId,
-                                newStatus: isActive ? "PAUSED" : "ACTIVE",
-                                currentStatus: status,
-                                platform: "Zepto",
-                                brandName
-                            });
-                        }}
+                        onChange={() => handleToggle(
+                            params.row.campaign_id,
+                            status,
+                            
+                        )}
                     />
                 );
             },
             type: "singleSelect",
+            valueOptions: STATUS_OPTIONS
         },
         {
             field: "impressions",
@@ -643,11 +632,11 @@ const CampaignsComponent = (props, ref) => {
             headerAlign: "left",
         },
         {
-            field: "sales",
+            field: "revenue",
             headerName: "SALES",
             minWidth: 150,
             renderCell: (params) => (
-                <ColumnPercentageDataComponent mainValue={params.row.sales} percentValue={params.row.sales_change} />
+                <ColumnPercentageDataComponent mainValue={params.row.revenue} percentValue={params.row.revenue_change} />
             ), type: "number", align: "left",
             headerAlign: "left",
         },

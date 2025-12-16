@@ -11,6 +11,9 @@ import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
 import RefreshIcon from '@mui/icons-material/Refresh';
+import UploadRulesModal from "./modal/UploadRulesModal";
+import UploadFileIcon from "@mui/icons-material/UploadFile";
+
 import { Snackbar, Box, Button, Tooltip } from "@mui/material";
 import { Alert } from "react-bootstrap";
 import {
@@ -86,6 +89,8 @@ const SmartControlDatatable = () => {
   const [openConfirmDialog, setOpenConfirmDialog] = useState(false);
   const [ruleToDelete, setRuleToDelete] = useState(null);
   const [isFromCache, setIsFromCache] = useState(false);
+  const [showUploadModal, setShowUploadModal] = useState(false);
+
 
   const { campaignSetter } = useContext(overviewContext);
 
@@ -94,6 +99,34 @@ const SmartControlDatatable = () => {
   const navigate = useNavigate();
 
   const abortControllerRef = useRef(null);
+
+  const handleUploadFile = async (formData) => {
+  const token = localStorage.getItem("accessToken");
+
+  try {
+    const response = await fetch(
+      "https://react-api-script.onrender.com/sugar/import-rules-excel", 
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`, 
+        },
+        body: formData
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error("Upload failed");
+    }
+
+    handleSnackbarOpen("Excel uploaded successfully!", "success");
+    getRulesData(true);
+
+  } catch (error) {
+    handleSnackbarOpen("Failed to upload Excel", "error");
+  }
+};
+
 
   const getRulesData = async (forceRefresh = false) => {
     if (!operator) return;
@@ -429,6 +462,7 @@ const SmartControlDatatable = () => {
   };
 
   return (
+  
     <React.Fragment>
       <Dialog open={openConfirmDialog} onClose={handleCloseConfirmDialog}>
         <DialogTitle>Confirm Deletion</DialogTitle>
@@ -486,6 +520,20 @@ const SmartControlDatatable = () => {
             {isLoading ? 'Refreshing...' : 'Refresh'}
           </Button>
         </Tooltip>
+
+        <Button
+  variant="outlined"
+  startIcon={<UploadFileIcon />}
+  onClick={() => setShowUploadModal(true)}
+  sx={{
+    borderColor: "#4caf50",
+    color: "#4caf50",
+    "&:hover": { borderColor: "#43a047", backgroundColor: "#e8f5e9" }
+  }}
+>
+  Import Rules
+</Button>
+
         
         <Button
           variant="contained"
@@ -526,6 +574,12 @@ const SmartControlDatatable = () => {
           {snackbar.message}
         </Alert>
       </Snackbar>
+      <UploadRulesModal
+  open={showUploadModal}
+  setOpen={setShowUploadModal}
+  onUpload={handleUploadFile}
+/>
+
     </React.Fragment>
   );
 };

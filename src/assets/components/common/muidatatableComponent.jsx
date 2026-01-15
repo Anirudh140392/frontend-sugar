@@ -158,6 +158,7 @@ const MuiDataTableComponent = (props) => {
                     localeText={customLocaleText}
                     columnVisibilityModel={columnVisibilityModel}
                     onColumnVisibilityModelChange={(newModel) => setColumnVisibilityModel(newModel)}
+                    getRowId={props.getRowId}
                 />
             )}
         </Box>

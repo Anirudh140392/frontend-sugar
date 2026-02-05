@@ -4,6 +4,16 @@ import { DataGrid, GridToolbarContainer, GridFilterPanel, GridToolbarColumnsButt
 import CircularProgress from '@mui/material/CircularProgress';
 import overviewContext from "../../../store/overview/overviewContext";
 import ExcelDownloadButton from "../molecules/excelDownloadButton";
+import { useMemo } from "react";
+
+const escapeCSV = (value) => {
+    if (value === null || value === undefined) return "";
+    const stringValue = String(value);
+    if (stringValue.includes(",") || stringValue.includes('"') || stringValue.includes("\n")) {
+        return `"${stringValue.replace(/"/g, '""')}"`;
+    }
+    return stringValue;
+};
 
 const CustomFilterPanel = (props) => {
 
@@ -37,6 +47,29 @@ const MuiDataTableComponent = (props) => {
     }
 
     const isLoadingData = overviewLoading
+
+    // Deduplicate data to handle API issues where identical rows might be returned
+    const uniqueData = useMemo(() => {
+        if (!data || !Array.isArray(data)) return [];
+        const seen = new Set();
+        return data.filter((row) => {
+            // Create a unique key based on the values in the pillars/columns defined
+            // This ensures if it looks the same in the table, it's considered a duplicate
+            const contentKey = columns
+                ? columns.map(col => {
+                    let val = row[col.field];
+                    if (col.valueGetter) {
+                        try { val = col.valueGetter({ row }); } catch (e) { }
+                    }
+                    return String(val);
+                }).join('|')
+                : JSON.stringify(row);
+
+            if (seen.has(contentKey)) return false;
+            seen.add(contentKey);
+            return true;
+        });
+    }, [data, columns]);
 
     const [filterModel, setFilterModel] = useState({ items: [] });
 
@@ -90,17 +123,14 @@ const MuiDataTableComponent = (props) => {
 
     const handleExport = (columns, rows) => {
         const csvContent = [
-            columns.map(col => col.headerName).join(','),
+            columns.map(col => escapeCSV(col.headerName)).join(','),
             ...rows.map(row =>
                 columns.map(col => {
                     let value = row[col.field];
                     if (col.valueGetter) {
                         value = col.valueGetter({ row });
                     }
-                    if (typeof value === 'number') {
-                        return value;
-                    }
-                    return value;
+                    return escapeCSV(value);
                 }).join(',')
             )
         ].join('\n');
@@ -122,7 +152,7 @@ const MuiDataTableComponent = (props) => {
             {isExport && <ExcelDownloadButton
                 handleExport={handleExport}
                 columns={columns}
-                rows={data}
+                rows={uniqueData}
                 buttonClass="excel-button bg-dark text-white border-dark"
                 buttonLabel="Export" />}
         </GridToolbarContainer>
@@ -132,7 +162,7 @@ const MuiDataTableComponent = (props) => {
         <Box sx={{ height: "100%", overflowY: "auto", display: "flex", justifyContent: "center", alignItems: "center" }}>
             {(isLoading || isLoadingData) ? (<CircularProgress />) : (
                 <DataGrid
-                    rows={data}
+                    rows={uniqueData}
                     columns={columns}
                     checkboxSelection
                     disableRowSelectionOnClick
